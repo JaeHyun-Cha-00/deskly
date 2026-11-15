@@ -1,0 +1,4 @@
+app_name: Deskly
+model: openai/gpt-oss-120b     # a DeepInfra chat model that supports tool calling
+temperature: 0.3
+max_tool_calls: 10             # per question

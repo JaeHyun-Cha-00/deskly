@@ -1,0 +1,57 @@
+@media (max-width: 1179px) {
+  .app,
+  .app[data-panel="closed"] { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+
+  .panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    width: min(var(--panel-w), 100vw);
+    box-shadow: var(--shadow);
+    transition: transform 220ms ease, visibility 220ms;
+  }
+
+  .app[data-panel="closed"] .panel { transform: translateX(100%); }
+  .panel-head, .panel-body { min-width: 0; }
+}
+
+@media (max-width: 760px) {
+  .app,
+  .app[data-panel="closed"] { grid-template-columns: minmax(0, 1fr); }
+
+  .rail {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: min(var(--rail-w), 86vw);
+    box-shadow: var(--shadow);
+    transition: transform 220ms ease, visibility 220ms;
+  }
+
+  .app[data-rail="closed"] .rail { transform: translateX(-100%); visibility: hidden; }
+  .rail-close, .open-rail { display: inline-grid; }
+  .chat-head { padding-left: 0.5rem; }
+  .composer-hint { display: none; }
+  .composer-bar .send { margin-left: auto; }
+  .callout { flex-direction: column; align-items: flex-start; }
+  .setting, .setting:has(.setting-text) { grid-template-columns: minmax(0, 1fr); }
+  .setting-name { padding-top: 0; }
+  .connector { grid-template-columns: 2.4rem minmax(0, 1fr); }
+  .connector-action { grid-column: 2; justify-items: start; }
+  .today { margin-top: 3vh; }
+  .empty h1 { font-size: var(--step-2); }
+  .chat-delete { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .msg-assistant:not(.settled) .step:not([data-done])::before { border-color: var(--pen); }
+}

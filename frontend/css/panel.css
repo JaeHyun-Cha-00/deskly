@@ -1,0 +1,173 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.app[data-panel="closed"] .panel { visibility: hidden; }
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: none;
+  height: var(--head-h);
+  padding: 0 0.6rem 0 1.25rem;
+  border-bottom: 1px solid var(--rule-soft);
+  min-width: var(--panel-w);
+}
+
+#panel-back { margin-left: -0.6rem; }
+
+.panel-title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--step-0);
+  font-weight: 500;
+}
+
+.panel-body {
+  flex: 1;
+  min-width: var(--panel-w);
+  overflow-y: auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.panel-empty,
+.panel-note {
+  margin: 0 0 1rem;
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+
+.panel-empty { margin-top: 0.5rem; max-width: 30ch; }
+
+.panel-section + .panel-section { margin-top: 1.5rem; }
+
+.panel-section-title {
+  margin: 0 0 0.4rem;
+  font-size: var(--step--2);
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.mail-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.mail-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.05rem 0.75rem;
+  width: 100%;
+  padding: 0.65rem 0.5rem 0.65rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  text-align: left;
+}
+
+.mail-row:hover { background: var(--paper); }
+.mail-row[aria-current="true"] { background: var(--pen-wash); }
+
+.mail-row[data-unread]::before {
+  content: "";
+  position: absolute;
+  left: 0.2rem;
+  top: 1.05rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--pen);
+}
+
+.mail-row-from {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mail-row-date { font-size: var(--step--2); color: var(--ink-soft); white-space: nowrap; padding-top: 0.15rem; }
+.mail-row-subject { grid-column: 1 / -1; font-size: var(--step--1); }
+
+.mail-row-snippet {
+  grid-column: 1 / -1;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memo-subject {
+  margin: 0.25rem 0 0.9rem;
+  font-family: var(--letter);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.memo-fields {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  margin: 0 0 1.25rem;
+  border-top: 1px solid var(--ink-soft);
+  font-size: var(--step--1);
+}
+
+.memo-fields dt,
+.memo-fields dd {
+  margin: 0;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.memo-fields dt { color: var(--ink-soft); }
+.memo-fields dd { overflow-wrap: anywhere; }
+
+.memo-body {
+  font-family: var(--letter);
+  font-size: var(--step-0);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.memo-foot {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.memo-foot .quiet-button { margin-left: -0.5rem; }
+
+.skeleton { display: grid; gap: 0.6rem; padding-top: 0.4rem; }
+
+.skeleton span {
+  height: 0.8rem;
+  border-radius: 4px;
+  background: var(--paper);
+  animation: shimmer 1.2s ease-in-out infinite alternate;
+}
+
+.skeleton span:first-child { height: 1.3rem; width: 80%; margin-bottom: 0.6rem; }
+.skeleton span:nth-child(3) { width: 60%; }
+.skeleton span:last-child { width: 70%; }
+
+@keyframes shimmer { to { opacity: 0.45; } }
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgb(18 24 32 / 0.35);
+}

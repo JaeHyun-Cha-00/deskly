@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#EEF1F4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121820" media="(prefers-color-scheme: dark)">
+  <title>Deskly</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <script src="/static/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/layout.css">
+  <link rel="stylesheet" href="/static/css/chat.css">
+  <link rel="stylesheet" href="/static/css/panel.css">
+  <link rel="stylesheet" href="/static/css/dialogs.css">
+  <link rel="stylesheet" href="/static/css/responsive.css">
+</head>
+<body>
+  <div class="app" id="app" data-panel="closed" data-rail="closed">
+
+    <aside class="rail" id="rail" aria-label="Chats">
+      <div class="rail-top">
+        <div class="brand" id="brand">Deskly</div>
+        <button type="button" class="icon-button rail-close" id="close-rail" aria-label="Hide chats">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="rail-actions">
+        <button type="button" class="new-chat" id="new-chat">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New chat</span>
+        </button>
+        <button type="button" class="jump" id="open-palette">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+          <span>Search</span>
+          <kbd data-mod>K</kbd>
+        </button>
+      </div>
+
+      <nav class="chat-list" id="chat-list" aria-label="Saved chats"></nav>
+
+      <div class="rail-foot">
+        <button type="button" class="connectors-button" id="open-connectors">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0V7zM12 16v5"/></svg>
+          <span class="connectors-label">Connectors</span>
+          <span class="connectors-summary" id="connectors-summary" data-state="checking"></span>
+        </button>
+        <button type="button" class="settings-button" id="open-settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+          <span>Settings</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="chat">
+      <header class="chat-head">
+        <button type="button" class="icon-button open-rail" id="open-rail" aria-label="Show chats">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <button type="button" class="chat-title" id="chat-title" title="Rename this chat">New chat</button>
+        <span class="demo-badge" id="demo-badge" hidden>Demo mail</span>
+        <button type="button" class="icon-button" id="toggle-panel" aria-controls="panel" aria-expanded="false" title="Sources">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M14.5 4.5v15"/></svg>
+          <span class="visually-hidden">Show or hide sources</span>
+        </button>
+      </header>
+
+      <div class="thread" id="thread">
+        <section class="empty" id="empty">
+          <p class="today" id="today"></p>
+          <h1>What can I help you with?</h1>
+          <p class="empty-hint">Ask in plain words. Next to each answer you'll see everything I looked at, and you can open it yourself.</p>
+
+          <div class="callout" id="connect-callout" hidden>
+            <p>Connect Gmail so I can read your mail. Google will ask you to allow read-only access.</p>
+            <button type="button" class="primary-button" id="connect-gmail">Open connectors</button>
+          </div>
+          <p class="demo-note" id="demo-note" hidden>Demo mode: mail answers come from six made-up mails, not your inbox.</p>
+
+        </section>
+        <div class="messages" id="messages" aria-live="polite"></div>
+      </div>
+
+      <form class="composer" id="composer">
+        <button type="button" class="jump-latest" id="jump-latest" hidden>Jump to latest</button>
+        <div class="notice" id="notice" role="alert" hidden>
+          <p id="notice-text"></p>
+          <button type="button" class="plain-button" id="notice-action" hidden></button>
+        </div>
+        <div class="composer-box">
+          <label class="visually-hidden" for="input">Message</label>
+          <textarea id="input" rows="1" placeholder="Ask me anything" autocomplete="off"></textarea>
+          <div class="composer-bar">
+            <span class="composer-hint">Shift + Enter for a new line</span>
+            <button type="submit" class="send" id="send">Send</button>
+          </div>
+        </div>
+      </form>
+    </main>
+
+    <aside class="panel" id="panel" aria-labelledby="panel-title">
+      <header class="panel-head">
+        <button type="button" class="icon-button" id="panel-back" aria-label="Back" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <h2 class="panel-title" id="panel-title">Sources</h2>
+        <button type="button" class="icon-button" id="panel-close" aria-label="Hide sources">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="panel-body" id="panel-body"></div>
+    </aside>
+
+    <div class="scrim" id="scrim" hidden></div>
+  </div>
+
+  <dialog class="palette" id="palette" aria-label="Search chats and actions">
+    <div class="palette-box">
+      <div class="palette-field">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+        <input id="palette-input" type="text" placeholder="Search chats and actions" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="palette-list">
+        <kbd>Esc</kbd>
+      </div>
+      <ul class="palette-list" id="palette-list" role="listbox" aria-label="Results"></ul>
+    </div>
+  </dialog>
+
+  <dialog class="settings connectors" id="connectors" aria-labelledby="connectors-title">
+    <div class="settings-box">
+      <header class="settings-head">
+        <h2 id="connectors-title">Connectors</h2>
+        <button type="button" class="icon-button" id="close-connectors" aria-label="Close connectors">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <p class="connectors-intro">Connect an app so I can use it when I answer. Each one asks only for what it needs, and you can disconnect it any time.</p>
+      <ul class="connector-list">
+        <li class="connector" id="connector-gmail" data-state="checking">
+          <span class="connector-mark" aria-hidden="true">G</span>
+          <div class="connector-text">
+            <span class="connector-name">Gmail</span>
+            <span class="connector-about">Search and read your mail. I can't send, delete or change anything.</span>
+          </div>
+          <div class="connector-action">
+            <span class="connector-state" id="gmail-state"></span>
+            <button type="button" class="primary-button" id="gmail-action"></button>
+          </div>
+        </li>
+        <li class="connector" data-state="later">
+          <span class="connector-mark" aria-hidden="true">C</span>
+          <div class="connector-text">
+            <span class="connector-name">Google Calendar</span>
+            <span class="connector-about">See your events and free time.</span>
+          </div>
+          <div class="connector-action"><span class="connector-state">Coming later</span></div>
+        </li>
+        <li class="connector" data-state="later">
+          <span class="connector-mark" aria-hidden="true">F</span>
+          <div class="connector-text">
+            <span class="connector-name">Files on this laptop</span>
+            <span class="connector-about">Find and read files in folders you choose.</span>
+          </div>
+          <div class="connector-action"><span class="connector-state">Coming later</span></div>
+        </li>
+      </ul>
+    </div>
+  </dialog>
+
+  <dialog class="settings" id="settings" aria-labelledby="settings-title">
+    <form class="settings-box" id="settings-form" method="dialog">
+      <header class="settings-head">
+        <h2 id="settings-title">Settings</h2>
+        <button type="submit" class="icon-button" aria-label="Close settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+
+      <section class="settings-section">
+        <h3>Appearance</h3>
+        <div class="setting">
+          <span class="setting-name" id="theme-label">Theme</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="theme-label">
+            <label><input type="radio" name="theme" value="system"><span>Match system</span></label>
+            <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+            <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Answers</h3>
+        <div class="setting">
+          <span class="setting-name" id="length-label">Length</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="length-label">
+            <label><input type="radio" name="length" value="short"><span>Short</span></label>
+            <label><input type="radio" name="length" value="detailed"><span>Detailed</span></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Saved chats</h3>
+        <div class="setting">
+          <p class="setting-text">Chats are saved only on this laptop, in <code>~/Library/Application Support/Deskly</code>. They include what I read to answer, such as mail text.</p>
+          <button type="button" class="plain-button danger" id="delete-all">Delete all chats</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Keyboard</h3>
+        <dl class="keys">
+          <dt><kbd data-mod>K</kbd></dt><dd>Search chats and actions</dd>
+          <dt><kbd data-mod>B</kbd></dt><dd>Show or hide sources</dd>
+          <dt><kbd>/</kbd></dt><dd>Write a message</dd>
+          <dt><kbd>Enter</kbd></dt><dd>Send</dd>
+          <dt><kbd>Shift</kbd> <kbd>Enter</kbd></dt><dd>New line</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Close a window or panel</dd>
+        </dl>
+      </section>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

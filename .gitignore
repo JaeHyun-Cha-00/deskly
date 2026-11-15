@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets (the API key; the Google files live in ~/Library/Application Support/Deskly)
+.env
+credentials.json
+token.json
+
+# Planning notes
+PLAN.md
+
+# macOS
+.DS_Store

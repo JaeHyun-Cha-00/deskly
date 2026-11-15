@@ -1,0 +1,15 @@
+export const state = {
+  chatId: crypto.randomUUID(),
+  title: "",
+  turns: [],
+  chats: [],
+  settings: {},
+  gmail: "checking",
+  appName: "Deskly",
+  modelKey: true,
+  offline: false,
+  busy: false,
+  controller: null,
+  panel: { view: "sources" },
+  mails: new Map(),
+};
