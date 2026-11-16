@@ -5,9 +5,9 @@ A personal AI agent for the laptop. It starts with Gmail (read only) and will gr
 ## Setup
 
 1. `uv sync`
-2. Put your DeepInfra key in `.env`:
+2. Put your OpenRouter key in `.env`:
    ```
-   DEEPINFRA_API_KEY=your_key
+   OPENROUTER_API_KEY=your_key
    ```
 3. Google: create a Google Cloud project, enable the Gmail API, add yourself as a test user, and create an OAuth client of type **Desktop app**. Save its JSON as `credentials.json` in `~/Library/Application Support/Deskly/`.
 

@@ -6,7 +6,7 @@ __pycache__/
 # Secrets (the API key; the Google files live in ~/Library/Application Support/Deskly)
 .env
 credentials.json
-token.json
+*token.json
 
 # Planning notes
 PLAN.md

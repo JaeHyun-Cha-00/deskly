@@ -12,8 +12,11 @@ APP_DIR.chmod(0o700)
 
 CHATS_DIR = APP_DIR / "chats"
 SETTINGS_FILE = APP_DIR / "settings.json"
-TOKEN_FILE = APP_DIR / "token.json"
 CREDENTIALS_FILE = APP_DIR / "credentials.json"
+
+# each app (gmail, calendar) keeps its own Google sign-in
+def token_file(app):
+    return APP_DIR / f"{app}_token.json"
 
 load_dotenv(ROOT / ".env")
 
