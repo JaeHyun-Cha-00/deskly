@@ -4,7 +4,7 @@ import { emptyEl, form, input, sendButton } from "./dom.js";
 import { renderPanel } from "./panel.js";
 import { state } from "./state.js";
 import { loadStatus, showNotice } from "./status.js";
-import { addUserMessage, createTurnView, finishStep, renderAnswer, renderCards, renderError, renderStep, scrollToEnd, setWaiting, showStopped, streamToken } from "./turns.js";
+import { addUserMessage, createTurnView, finishStep, renderAnswer, renderApproval, renderCards, renderError, renderStep, scrollToEnd, setWaiting, showStopped, streamToken } from "./turns.js";
 
 export async function stopAnswer() {
   const controller = state.controller;
@@ -39,8 +39,10 @@ export async function readEvents(response, onEvent) {
 
 export function handleEvent(view, event) {
   const turn = view.turn;
+  // picking up a paused answer sends the paused step again
+  if (event.type === "step" && turn.steps.some((s) => s.id === event.id)) return;
   if (event.type === "step") {
-    const step = { id: event.id, label: event.label, done: false, tool: "", result: "", mails: [], events: [] };
+    const step = { id: event.id, label: event.label, done: false, tool: "", result: "", mails: [], events: [], files: [] };
     turn.steps.push(step);
     renderStep(view, step);
     // text before a step was the agent thinking aloud
@@ -50,7 +52,7 @@ export function handleEvent(view, event) {
   if (event.type === "step_done") {
     const step = turn.steps.find((s) => s.id === event.id);
     if (step) {
-      Object.assign(step, { done: true, tool: event.tool, result: event.result, mails: event.mails, events: event.events || [] });
+      Object.assign(step, { done: true, tool: event.tool, result: event.result, mails: event.mails, events: event.events || [], files: event.files || [] });
       finishStep(view, step);
       renderCards(view);
       if (state.panel.view === "sources") renderPanel();
@@ -60,6 +62,16 @@ export function handleEvent(view, event) {
   if (event.type === "answer") {
     turn.answer = event.text;
     renderAnswer(view, event.text);
+  }
+  if (event.type === "approval") {
+    turn.approval = { requests: event.requests, state: "waiting" };
+    renderApproval(view, turn.approval);
+    setWaiting(view, "Waiting for your OK");
+  }
+  if (event.type === "decided" || event.type === "expired") {
+    turn.approval = { ...turn.approval, state: event.type === "expired" ? "expired" : event.state };
+    renderApproval(view, turn.approval);
+    setWaiting(view, event.type === "expired" ? "" : "Working on it");
   }
   if (event.type === "error") {
     turn.error = event.message;
@@ -92,32 +104,47 @@ export async function send(text) {
   addUserMessage(text, turn.at, true);
   const view = createTurnView(turn, true);
   scrollToEnd(true);
-  state.controller = new AbortController();
+  await follow(view, "/api/chat", { chat_id: state.chatId, text }, text);
+}
 
+// the user's answer on an approval card: the paused answer picks up from there
+export async function decide(view, decisions) {
+  if (state.busy || state.offline) return;
+  setBusy(true);
+  view.approval?.querySelectorAll("button, input, textarea").forEach((node) => { node.disabled = true; });
+  setWaiting(view, "Working on it");
+  await follow(view, `/api/chats/${state.chatId}/decide`, { decisions }, null);
+}
+
+// sends one request and shows the answer's events in `view` as they arrive
+async function follow(view, url, body, retryText) {
+  const turn = view.turn;
+  state.controller = new AbortController();
   try {
-    const response = await fetch("/api/chat", {
+    const response = await fetch(url, {
       method: "POST",
       headers: HEADERS,
-      body: JSON.stringify({ chat_id: state.chatId, text }),
+      body: JSON.stringify(body),
       signal: state.controller.signal,
     });
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(body.detail || `the app answered ${response.status}`);
+      const answer = await response.json().catch(() => ({}));
+      throw new Error(answer.detail || `the app answered ${response.status}`);
     }
     await readEvents(response, (event) => handleEvent(view, event));
-    if (!turn.answer && !turn.error && !turn.stopped) renderError(view, "No reply came back.", text);
+    const asking = ["waiting", "expired"].includes(turn.approval?.state);
+    if (!turn.answer && !turn.error && !turn.stopped && !asking) renderError(view, "No reply came back.", retryText);
   } catch (error) {
     if (error.name === "AbortError") {
       turn.stopped = true;
       showStopped(view, view.draft.trim());
     } else if (error instanceof TypeError) {
       turn.error = "Can't reach the app.";
-      renderError(view, turn.error, text);
+      renderError(view, turn.error, retryText);
       loadStatus();
     } else {
       turn.error = error.message;
-      renderError(view, error.message, text);
+      renderError(view, error.message, retryText);
     }
   } finally {
     view.article.classList.add("settled");

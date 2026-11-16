@@ -10,7 +10,11 @@ from config import CREDENTIALS_FILE, token_file
 # after changing an app's scopes, disconnect it so the next use signs in again
 SCOPES = {
     "gmail": ["https://www.googleapis.com/auth/gmail.readonly"],
-    "calendar": ["https://www.googleapis.com/auth/calendar.readonly"],
+    "calendar": [
+        "https://www.googleapis.com/auth/calendar.readonly",
+        # adding events (each one approved by the user first)
+        "https://www.googleapis.com/auth/calendar.events",
+    ],
 }
 
 @cache
@@ -31,6 +35,13 @@ def get_credentials(app):
         os.chmod(file, 0o600)
 
     return creds
+
+def access_token(app):
+    # a Google access token lasts about an hour, so renew it when it runs out
+    creds = get_credentials(app)
+    if not creds.valid:
+        creds.refresh(Request())
+    return creds.token
 
 def is_signed_in(app):
     return token_file(app).exists()

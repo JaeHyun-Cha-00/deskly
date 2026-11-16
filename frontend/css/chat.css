@@ -414,3 +414,79 @@ button.step-result:hover { color: var(--pen); text-decoration-color: var(--pen);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--rule);
 }
+
+/* The approval card: the agent stopped before changing something and waits for the user */
+.approval {
+  margin: 0 0 1.1rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--rule);
+  border-left: 5px double var(--pen);
+  border-radius: 0 8px 8px 0;
+  background: var(--sheet);
+  font-size: var(--step-0);
+}
+
+.approval[data-state="approved"],
+.approval[data-state="edited"] { border-left-color: var(--ok); }
+.approval[data-state="rejected"] { border-left-color: var(--danger); }
+.approval[data-state="expired"] { border-left-style: dashed; border-left-color: var(--rule); color: var(--ink-soft); }
+
+.approval-title {
+  margin: 0 0 0.35rem;
+  font-size: var(--step--2);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pen);
+}
+
+.approval:not([data-state="waiting"]) .approval-title { color: var(--ink-soft); }
+
+.approval-text { margin: 0 0 0.6rem; font-family: var(--letter); font-size: var(--step-1); }
+
+.approval-fields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.2rem 0.9rem;
+  margin: 0 0 0.9rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--rule-soft);
+  font-size: var(--step--1);
+}
+
+.approval-fields dt { color: var(--ink-soft); }
+.approval-fields dd { margin: 0; overflow-wrap: anywhere; }
+
+.approval-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.approval-state { margin: 0; font-size: var(--step--1); color: var(--ink-soft); }
+.approval[data-state="approved"] .approval-state,
+.approval[data-state="edited"] .approval-state { color: var(--ok); font-weight: 500; }
+.approval[data-state="rejected"] .approval-state { color: var(--danger); font-weight: 500; }
+
+.plain-button.reject { color: var(--danger); }
+.plain-button.reject:hover { border-color: var(--danger); }
+.primary-button.reject { background: var(--danger); }
+
+.approval-edit,
+.approval-reject { display: grid; gap: 0.6rem; margin-top: 0.3rem; }
+
+.approval-edit label,
+.approval-reject label { display: grid; gap: 0.2rem; font-size: var(--step--1); color: var(--ink-soft); }
+
+.approval-edit input,
+.approval-edit textarea,
+.approval-reject input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step-0);
+}
+
+.approval-edit textarea { min-height: 4.5rem; resize: vertical; }
+.approval-edit input:focus,
+.approval-edit textarea:focus,
+.approval-reject input:focus { outline: 2px solid var(--pen); outline-offset: 1px; }

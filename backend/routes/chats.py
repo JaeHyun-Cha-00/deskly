@@ -16,6 +16,11 @@ def chat_id_or_400(chat_id):
         raise HTTPException(400, "That is not a chat id.")
     return chat_id
 
+def stream(out):
+    # the answer's events as Server-Sent Events, until the runner puts None
+    while (event := out.get()) is not None:
+        yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
 @router.get("/api/chats")
 def chats():
     return history.list_chats()
@@ -54,11 +59,38 @@ async def ask(request: Request):
     out = queue.Queue()
     threading.Thread(target=runner.answer, args=(chat_id, text, out), daemon=True).start()
 
-    def events():
-        while (event := out.get()) is not None:
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+    return StreamingResponse(stream(out), media_type="text/event-stream")
 
-    return StreamingResponse(events(), media_type="text/event-stream")
+def clean_decision(raw):
+    # only the three answers the approval card offers, with the fields each one needs
+    kind = raw.get("type") if isinstance(raw, dict) else None
+    if kind == "approve":
+        return {"type": "approve"}
+    if kind == "reject":
+        message = str(raw.get("message", "")).strip()[:500]
+        return {"type": "reject", "message": message} if message else {"type": "reject"}
+    if kind == "edit":
+        action = raw.get("edited_action") or {}
+        args = action.get("args")
+        if not isinstance(action.get("name"), str) or not isinstance(args, dict):
+            raise HTTPException(400, "An edit needs the action's name and details.")
+        # the card edits plain text and numbers only
+        if not all(isinstance(k, str) and isinstance(v, (str, int, float, bool)) for k, v in args.items()):
+            raise HTTPException(400, "An edit can only change text and numbers.")
+        return {"type": "edit", "edited_action": {"name": action["name"], "args": args}}
+    raise HTTPException(400, "Approve, edit or reject.")
+
+@router.post("/api/chats/{chat_id}/decide")
+async def decide(chat_id: str, request: Request):
+    body = await request.json()
+    raw = body.get("decisions")
+    if not isinstance(raw, list) or not raw:
+        raise HTTPException(400, "Send a decision.")
+    decisions = [clean_decision(d) for d in raw]
+
+    out = queue.Queue()
+    threading.Thread(target=runner.decide, args=(chat_id_or_400(chat_id), decisions, out), daemon=True).start()
+    return StreamingResponse(stream(out), media_type="text/event-stream")
 
 @router.post("/api/chats/{chat_id}/stop")
 def stop(chat_id: str):

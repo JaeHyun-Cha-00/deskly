@@ -1,8 +1,8 @@
-import { send } from "./ask.js";
+import { decide, send } from "./ask.js";
 import { longDate, shortDate } from "./dates.js";
 import { $, ICONS, button, copyText, el, input, messagesEl, thread, toast } from "./dom.js";
 import { renderMarkdown } from "./markdown.js";
-import { markOpenMail, openMail, showPanel, uniqueMails } from "./panel.js";
+import { OPENED, markOpenMail, openMail, showPanel, uniqueMails } from "./panel.js";
 
 export function nearBottom() {
   return thread.scrollHeight - thread.scrollTop - thread.clientHeight < 160;
@@ -61,6 +61,12 @@ export function finishStep(view, step) {
   item.dataset.done = "";
   if (!step.result) return;
 
+  if (step.files?.length) {
+    const result = button("step-result", step.result, () => showPanel({ view: "files", step }, true));
+    result.title = "Show these files";
+    item.append(result);
+    return;
+  }
   if (step.events?.length) {
     const result = button("step-result", step.result, () => showPanel({ view: "events", step }, true));
     result.title = "Show these events";
@@ -71,7 +77,8 @@ export function finishStep(view, step) {
     item.append(el("span", "step-result", step.result));
     return;
   }
-  const opened = step.tool === "read_email";
+  // one opened mail opens itself; a conversation or a search shows its list
+  const opened = OPENED.has(step.tool) && step.mails.length === 1;
   const result = button("step-result", step.result, () => opened ? openMail(step.mails[0].id) : showPanel({ view: "search", step }, true));
   result.title = opened ? "Show this mail" : "Show what this search found";
   item.append(result);
@@ -137,6 +144,106 @@ export function showStopped(view, text) {
   view.letter.after(el("p", "stopped-note", "Stopped"));
 }
 
+const DECIDED = {
+  approved: "Approved",
+  edited: "Approved with your changes",
+  rejected: "Rejected",
+  expired: "Expired. Ask again and I'll prepare it again.",
+};
+
+// the fields an edit can change, for tools that may leave some out
+const FIELDS = { create_event: ["title", "start", "end", "location", "description"] };
+
+const fieldName = (key) => key.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
+
+function details(args) {
+  const list = el("dl", "approval-fields");
+  for (const [key, value] of Object.entries(args)) {
+    if (value === "" || (key === "calendar_id" && value === "primary")) continue;
+    list.append(el("dt", null, fieldName(key)), el("dd", null, String(value)));
+  }
+  return list;
+}
+
+export function renderApproval(view, approval) {
+  view.approval?.remove();
+  const card = el("section", "approval");
+  card.dataset.state = approval.state;
+  card.setAttribute("aria-label", "Needs your OK");
+  card.append(el("p", "approval-title", approval.state === "waiting" ? "Needs your OK" : "Your decision"));
+  for (const request of approval.requests) {
+    card.append(el("p", "approval-text", request.description), details(request.args));
+  }
+
+  const actions = el("div", "approval-actions");
+  if (approval.state === "waiting") {
+    const all = (decision) => approval.requests.map(() => decision);
+    actions.append(button("primary-button", "Approve", () => decide(view, all({ type: "approve" }))));
+    if (approval.requests.length === 1) actions.append(button("plain-button", "Edit", () => startEdit(view, card, approval.requests[0])));
+    actions.append(button("plain-button reject", "Reject", () => startReject(view, card, approval.requests)));
+  } else {
+    actions.append(el("p", "approval-state", DECIDED[approval.state] || approval.state));
+  }
+  card.append(actions);
+  view.letter.before(card);
+  view.approval = card;
+  scrollToEnd();
+}
+
+function startEdit(view, card, request) {
+  const form = el("form", "approval-edit");
+  const keys = [...new Set([...(FIELDS[request.name] || []), ...Object.keys(request.args)])];
+  for (const key of keys) {
+    const value = request.args[key] ?? "";
+    const label = el("label", null, fieldName(key));
+    const field = el(key === "description" ? "textarea" : "input");
+    field.name = key;
+    field.value = String(value);
+    if (typeof value === "number") field.type = "number";
+    label.append(field);
+    form.append(label);
+  }
+  const actions = el("div", "approval-actions");
+  const save = el("button", "primary-button", "Approve with changes");
+  save.type = "submit";
+  actions.append(save, button("plain-button", "Cancel", () => renderApproval(view, view.turn.approval)));
+  form.append(actions);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const args = {};
+    for (const key of keys) {
+      const raw = form.elements[key].value;
+      // keep what the agent sent for fields left empty that it never had
+      if (raw === "" && !(key in request.args)) continue;
+      args[key] = typeof request.args[key] === "number" ? Number(raw) : raw;
+    }
+    decide(view, [{ type: "edit", edited_action: { name: request.name, args } }]);
+  });
+  card.querySelectorAll(".approval-fields, .approval-actions").forEach((node) => node.remove());
+  card.append(form);
+  form.elements[keys[0]]?.focus();
+}
+
+function startReject(view, card, requests) {
+  const form = el("form", "approval-reject");
+  const label = el("label", null, "Why not? (optional, it helps me try again)");
+  const reason = el("input");
+  reason.name = "reason";
+  label.append(reason);
+  const actions = el("div", "approval-actions");
+  const confirm = el("button", "primary-button reject", "Reject");
+  confirm.type = "submit";
+  actions.append(confirm, button("plain-button", "Cancel", () => renderApproval(view, view.turn.approval)));
+  form.append(label, actions);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const message = reason.value.trim();
+    decide(view, requests.map(() => (message ? { type: "reject", message } : { type: "reject" })));
+  });
+  card.querySelector(".approval-actions").replaceWith(form);
+  reason.focus();
+}
+
 export function renderError(view, message, retryText) {
   cancelAnimationFrame(view.frame);
   view.frame = 0;
@@ -146,7 +253,7 @@ export function renderError(view, message, retryText) {
 }
 
 export function renderCards(view) {
-  const opened = uniqueMails(view.turn.steps.filter((s) => s.tool === "read_email"));
+  const opened = uniqueMails(view.turn.steps.filter((s) => OPENED.has(s.tool)));
   view.cards.replaceChildren(...opened.map(mailCard));
   view.cards.hidden = !opened.length;
   markOpenMail();
@@ -168,8 +275,11 @@ export function renderSavedTurn(turn) {
   const view = createTurnView(turn);
   view.article.classList.add("settled");
   turn.steps.forEach((step) => renderStep(view, step));
+  if (turn.approval) renderApproval(view, turn.approval);
   if (turn.stopped) showStopped(view, turn.answer);
   else if (turn.answer) renderAnswer(view, turn.answer);
+  else if (turn.approval?.state === "waiting") setWaiting(view, "Waiting for your OK");
+  else if (turn.approval?.state === "expired") setWaiting(view, "");
   else renderError(view, turn.error || "No reply came back.", null);
   renderCards(view);
 }
