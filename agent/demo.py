@@ -29,26 +29,36 @@ def summary(mail):
     return {k: mail[k] for k in ("id", "from", "subject", "date", "snippet", "unread")}
 
 @tool(parse_docstring=True)
-def search_emails(query: str, max_results: int = 10) -> str:
-    """Search the user's Gmail and list the matching mails, newest first.
+def search_threads(query: str, max_results: int = 10) -> str:
+    """Search the user's Gmail and list the matching conversations, newest first.
 
     Args:
         query: Gmail search words. Use "" for the newest mail.
         max_results: How many mails to return (1 to 25).
     """
     words = [w.lower() for w in query.split() if ":" not in w]
-    text = lambda m: f"{m['from']} {m['subject']} {m['snippet']}".lower()
+    def text(m):
+        return f"{m['from']} {m['subject']} {m['snippet']}".lower()
     found = [summary(m) for m in MAILS
              if ("is:unread" not in query or m["unread"]) and all(w in text(m) for w in words)]
     return json.dumps(found[:max_results])
 
 @tool(parse_docstring=True)
-def read_email(email_id: str) -> str:
+def get_thread(thread_id: str) -> str:
+    """Read a whole conversation. In demo mode each conversation has one mail.
+
+    Args:
+        thread_id: The id from search_threads.
+    """
+    return json.dumps(find(thread_id))
+
+@tool(parse_docstring=True)
+def get_message(message_id: str) -> str:
     """Read one mail in full: sender, recipients, subject, date and body text.
 
     Args:
-        email_id: The id from search_emails.
+        message_id: The id from search_threads.
     """
-    return json.dumps(find(email_id))
+    return json.dumps(find(message_id))
 
-DEMO_TOOLS = [search_emails, read_email]
+DEMO_TOOLS = [search_threads, get_thread, get_message]
