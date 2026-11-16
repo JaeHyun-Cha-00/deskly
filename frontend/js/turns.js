@@ -43,7 +43,7 @@ export function createTurnView(turn, live) {
   body.append(letter, cards, actions);
   article.append(slip, body);
   messagesEl.append(article);
-  return { turn, article, slip, letter, cards, actions, steps: new Map(), draft: "", frame: 0 };
+  return { turn, article, slip, letter, cards, actions, steps: new Map(), draft: "", shown: 0, frame: 0 };
 }
 
 export function renderStep(view, step) {
@@ -72,25 +72,46 @@ export function finishStep(view, step) {
 }
 
 export function setWaiting(view, text) {
+  cancelAnimationFrame(view.frame);
+  view.frame = 0;
+  view.shown = 0;
   view.letter.className = "letter waiting";
   view.letter.textContent = text;
 }
 
+// text arrives from the network in uneven bursts; show it at a steady pace
 export function streamToken(view, text) {
   view.draft += text;
-  if (view.frame) return;
-  view.frame = requestAnimationFrame(() => {
-    view.frame = 0;
-    view.letter.className = "letter streaming";
-    view.letter.innerHTML = renderMarkdown(view.draft);
-    scrollToEnd();
-  });
+  if (!view.frame) view.frame = requestAnimationFrame(() => reveal(view));
 }
 
-export function renderAnswer(view, text) {
+function reveal(view) {
+  // a bigger backlog is shown faster, so the text never falls far behind
+  const backlog = view.draft.length - view.shown;
+  view.shown += Math.max(1, Math.ceil(backlog / 12));
+  view.letter.className = "letter streaming";
+  view.letter.innerHTML = renderMarkdown(view.draft.slice(0, view.shown));
+  scrollToEnd();
+
+  if (view.shown < view.draft.length) {
+    view.frame = requestAnimationFrame(() => reveal(view));
+  } else {
+    view.frame = 0;
+    if (view.final !== undefined) renderAnswer(view, view.final);
+  }
+}
+
+export function renderAnswer(view, text, now) {
+  // let the streamed text finish appearing before the final answer replaces it
+  if (view.frame && !now) {
+    view.final = text;
+    return;
+  }
   cancelAnimationFrame(view.frame);
   view.frame = 0;
   view.draft = "";
+  view.shown = 0;
+  view.final = undefined;
   view.letter.className = "letter";
   view.letter.innerHTML = renderMarkdown(text);
 
@@ -104,13 +125,15 @@ export function renderAnswer(view, text) {
 }
 
 export function showStopped(view, text) {
-  if (text) renderAnswer(view, text);
+  if (text) renderAnswer(view, text, true);
   else setWaiting(view, "");
   view.letter.classList.add("stopped");
   view.letter.after(el("p", "stopped-note", "Stopped"));
 }
 
 export function renderError(view, message, retryText) {
+  cancelAnimationFrame(view.frame);
+  view.frame = 0;
   view.letter.className = "letter error";
   view.letter.replaceChildren(el("p", null, message));
   if (retryText) view.letter.append(button("quiet-button", "Try again", () => send(retryText)));
