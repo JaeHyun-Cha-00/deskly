@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from backend import settings
 from config import DEMO, config
 from connectors.apps import APPS
+from connectors.mcp.servers import SERVERS
 
 router = APIRouter()
 
@@ -22,6 +23,8 @@ def status():
     return {
         "app_name": config.get("app_name", "Assistant"),
         "apps": app_states(),
+        # the MCP servers, so the screen can show a Connectors row for each
+        "mcp": [{"id": name, "name": s["name"], "about": s["about"]} for name, s in SERVERS.items()],
         "model_key": bool(os.getenv("OPENROUTER_API_KEY")),
         "settings": settings.load(),
     }

@@ -1,20 +1,83 @@
 import os
-from functools import cache
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import ToolCallLimitMiddleware, ToolErrorMiddleware, dynamic_prompt
+from langchain.agents.middleware import AgentMiddleware, HumanInTheLoopMiddleware, ToolCallLimitMiddleware, ToolErrorMiddleware, dynamic_prompt
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.types import Command
 
 from agent.demo import DEMO_TOOLS
 from agent.prompts import system_prompt
-from agent.steps import step_label, step_result
-from agent.tools import tools_for
+from agent.steps import approval_text, step_label, step_result
+from agent.tools import WRITE_TOOLS, tools_for
+import event_loop
 from config import config
 from connectors.apps import connected
+from connectors.mcp.client import load_tools
+from connectors.mcp.servers import SERVERS
 
-@cache
-def build_agent(length="short", connectors=(), demo=False):
+# where a paused answer waits for the user's decision; kept in memory only,
+# so closing the app lets go of every pending approval
+CHECKPOINTS = InMemorySaver()
+
+# put before the result of a call the user changed on the approval card
+EDIT_NOTICE = (
+    "The user changed this action on the approval card before it ran. The result below is "
+    "what was actually done; tell the user that, not what you first asked for."
+)
+
+# the most of one tool result the model reads; MCP servers can send a lot
+MAX_RESULT_CHARS = 12000
+
+def result_text(content):
+    # MCP tools may answer with a list of parts; the model and the screen want one text
+    if isinstance(content, str):
+        return content
+    return "\n".join(part.get("text", "") if isinstance(part, dict) else str(part) for part in content)
+
+class CapToolResults(AgentMiddleware):
+    # cuts any tool result that is too long and says so, so one big answer can't fill the model's memory
+    def cut(self, message):
+        if isinstance(message, ToolMessage):
+            text = result_text(message.content)
+            if len(text) > MAX_RESULT_CHARS:
+                message.content = text[:MAX_RESULT_CHARS] + "\n\n(The result was cut short here.)"
+        return message
+
+    def wrap_tool_call(self, request, handler):
+        return self.cut(handler(request))
+
+    async def awrap_tool_call(self, request, handler):
+        return self.cut(await handler(request))
+
+def approval(name):
+    return {
+        "allowed_decisions": ["approve", "edit", "reject"],
+        "description": lambda call, state, runtime: approval_text(call),
+    }
+
+# built agents by (length, connectors, demo); building one loads the MCP servers' tools
+AGENTS = {}
+
+async def get_agent(length="short", connectors=(), demo=False):
+    key = (length, connectors, demo)
+    if key in AGENTS:
+        return AGENTS[key]
+    tools = DEMO_TOOLS if demo else tools_for(connectors)
+    writes = set(WRITE_TOOLS)
+    failed = []
+    servers = [name for name in connectors if name in SERVERS]
+    if servers and not demo:
+        mcp_tools, mcp_writes, failed = await load_tools(servers)
+        tools, writes = tools + mcp_tools, writes | mcp_writes
+    agent = build_agent(length, connectors, tools, writes)
+    # a server that didn't answer is tried again next time instead of being left out for good
+    if not failed:
+        AGENTS[key] = agent
+    return agent
+
+def build_agent(length, connectors, tools, writes):
     model = ChatOpenAI(
         model=config["model"],
         # OpenRouter sends each request to a provider that is up, so one provider being down doesn't stop the app
@@ -32,26 +95,42 @@ def build_agent(length="short", connectors=(), demo=False):
 
     return create_agent(
         model=model,
-        tools=DEMO_TOOLS if demo else tools_for(connectors),
+        tools=tools,
         middleware=[
             prompt,
+            CapToolResults(),
             ToolErrorMiddleware(on_error=lambda error: f"Error: {error}"),
             ToolCallLimitMiddleware(run_limit=config["max_tool_calls"], exit_behavior="continue"),
+            # stops before any tool that changes something, until the user decides
+            HumanInTheLoopMiddleware(interrupt_on={name: approval(name) for name in writes}, edit_notice=EDIT_NOTICE),
         ],
+        checkpointer=CHECKPOINTS,
     )
 
 def chat(messages, text):
+    # the terminal chat: one run, nothing to approve there (write tools stop and are skipped)
     messages = messages + [{"role": "user", "content": text}]
-    agent = build_agent(connectors=connected())
-    messages = agent.invoke({"messages": messages})["messages"]
+    async def ask():
+        agent = await get_agent(connectors=connected())
+        return await agent.ainvoke({"messages": messages}, {"configurable": {"thread_id": "terminal"}})
+
+    found = event_loop.run(ask())
+    messages = found["messages"]
     return messages[-1].content.strip(), messages
 
-def stream_chat(messages, text, runner):
-    # yields step, step_done, token and answer events, then the final history
-    messages = messages + [{"role": "user", "content": text}]
+async def stream_chat(messages, text, runner, run_id, decisions=None):
+    # yields step, step_done, token, answer and approval events, then the final history.
+    # It is async because tools from MCP servers only run that way.
+    # With decisions, it picks up the paused run `run_id` instead of starting a new one.
+    settings = {"configurable": {"thread_id": run_id}}
+    if decisions is None:
+        messages = messages + [{"role": "user", "content": text}]
+        start = {"messages": messages}
+    else:
+        start = Command(resume={"decisions": decisions})
     history = messages
 
-    for mode, chunk in runner.stream({"messages": messages}, stream_mode=["updates", "messages", "values"]):
+    async for mode, chunk in runner.astream(start, settings, stream_mode=["updates", "messages", "values"]):
         if mode == "values":
             history = chunk["messages"]
         elif mode == "messages":
@@ -59,11 +138,17 @@ def stream_chat(messages, text, runner):
             if isinstance(piece, AIMessageChunk) and meta.get("langgraph_node") == "model" and isinstance(piece.content, str) and piece.content:
                 yield {"type": "token", "text": piece.content}
         else:
-            for update in chunk.values():
+            for node, update in chunk.items():
+                if node == "__interrupt__":
+                    # the agent stopped before a write tool and waits for the user
+                    for paused in update:
+                        requests = paused.value["action_requests"]
+                        yield {"type": "approval", "requests": [{"name": r["name"], "args": r["args"], "description": r.get("description", "")} for r in requests]}
+                    continue
                 for message in (update or {}).get("messages", []):
                     if isinstance(message, ToolMessage):
-                        result, mails, events = step_result(message.name, message.content, message.artifact)
-                        yield {"type": "step_done", "id": message.tool_call_id, "tool": message.name, "result": result, "mails": mails, "events": events}
+                        cards = step_result(message.name, message.content, message.artifact)
+                        yield {"type": "step_done", "id": message.tool_call_id, "tool": message.name, **cards}
                     elif isinstance(message, AIMessage) and message.tool_calls:
                         for call in message.tool_calls:
                             yield {"type": "step", "id": call["id"], "label": step_label(call)}
