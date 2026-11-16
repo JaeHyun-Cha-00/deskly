@@ -1,5 +1,5 @@
 import { getJson } from "./api.js";
-import { longDate, shortDate } from "./dates.js";
+import { eventTime, longDate, shortDate } from "./dates.js";
 import { $, ICONS, WIDE, app, button, el } from "./dom.js";
 import { state } from "./state.js";
 
@@ -15,6 +15,15 @@ export function chatMails() {
   const openedIds = new Set(opened.map((m) => m.id));
   const found = uniqueMails(steps.filter((s) => s.tool !== "read_email")).filter((m) => !openedIds.has(m.id));
   return { opened, found };
+}
+
+export function chatEvents() {
+  const found = new Map();
+  // chats saved before Calendar have no events on their steps
+  for (const step of state.turns.flatMap((turn) => turn.steps)) {
+    for (const event of step.events || []) if (!found.has(event.id)) found.set(event.id, event);
+  }
+  return [...found.values()].sort((a, b) => a.start.localeCompare(b.start));
 }
 
 export function panelIsOpen() {
@@ -42,12 +51,18 @@ export function renderPanel() {
   if (view.view === "sources") {
     $("panel-title").textContent = "Sources";
     const { opened, found } = chatMails();
+    const events = chatEvents();
     body.replaceChildren();
-    if (!opened.length && !found.length) {
+    if (!opened.length && !found.length && !events.length) {
       body.append(el("p", "panel-empty", "Everything I look at in this chat is listed here, so you can check what my answers are based on."));
     }
     if (opened.length) body.append(mailSection("Opened", opened));
     if (found.length) body.append(mailSection("Found in searches", found));
+    if (events.length) body.append(eventSection("Events", events));
+  }
+  if (view.view === "events") {
+    $("panel-title").textContent = "Calendar";
+    body.replaceChildren(el("p", "panel-note", view.step.label), eventSection(null, view.step.events));
   }
   if (view.view === "search") {
     $("panel-title").textContent = "Search results";
@@ -74,6 +89,32 @@ export function mailSection(title, mails) {
       el("span", "mail-row-subject", mail.subject || "(no subject)"),
     );
     if (mail.snippet) row.append(el("span", "mail-row-snippet", mail.snippet));
+    const item = el("li");
+    item.append(row);
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
+export function eventSection(title, events) {
+  const section = el("section", "panel-section");
+  if (title) section.append(el("h3", "panel-section-title", `${title}, ${events.length}`));
+  const list = el("ul", "mail-list");
+  for (const event of events) {
+    // a row opens the event in Google Calendar when there is a link
+    const row = el(event.link ? "a" : "div", "mail-row event-row");
+    if (event.link) {
+      row.href = event.link;
+      row.target = "_blank";
+      row.rel = "noopener noreferrer";
+      row.title = "Open in Google Calendar";
+    }
+    row.append(
+      el("span", "mail-row-from", event.title || "(no title)"),
+      el("span", "mail-row-subject", eventTime(event)),
+    );
+    if (event.location) row.append(el("span", "mail-row-snippet", event.location));
     const item = el("li");
     item.append(row);
     list.append(item);

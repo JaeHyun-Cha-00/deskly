@@ -77,8 +77,8 @@
           <p class="empty-hint">Ask in plain words. Next to each answer you'll see everything I looked at, and you can open it yourself.</p>
 
           <div class="callout" id="connect-callout" hidden>
-            <p>Connect Gmail so I can read your mail. Google will ask you to allow read-only access.</p>
-            <button type="button" class="primary-button" id="connect-gmail">Open connectors</button>
+            <p>Connect Gmail or Calendar so I can read your mail and events. Google will ask you to allow read-only access.</p>
+            <button type="button" class="primary-button" id="callout-connectors">Open connectors</button>
           </div>
           <p class="demo-note" id="demo-note" hidden>Demo mode: mail answers come from six made-up mails, not your inbox.</p>
 
@@ -151,13 +151,16 @@
             <button type="button" class="primary-button" id="gmail-action"></button>
           </div>
         </li>
-        <li class="connector" data-state="later">
+        <li class="connector" id="connector-calendar" data-state="checking">
           <span class="connector-mark" aria-hidden="true">C</span>
           <div class="connector-text">
             <span class="connector-name">Google Calendar</span>
-            <span class="connector-about">See your events and free time.</span>
+            <span class="connector-about">See your events and when you're free. I can't add, change or delete anything.</span>
           </div>
-          <div class="connector-action"><span class="connector-state">Coming later</span></div>
+          <div class="connector-action">
+            <span class="connector-state" id="calendar-state"></span>
+            <button type="button" class="primary-button" id="calendar-action"></button>
+          </div>
         </li>
         <li class="connector" data-state="later">
           <span class="connector-mark" aria-hidden="true">F</span>

@@ -24,6 +24,18 @@ export function longDate(value) {
   return date.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+// "Tue, Nov 17, 12:00 PM to 1:30 PM", or "Tue, Nov 17, all day"
+export function eventTime(event) {
+  // an all-day "2026-11-17" would be read as UTC midnight, so read it as local time
+  const start = parseDate(event.all_day ? `${event.start}T00:00` : event.start);
+  if (!start) return event.start || "";
+  const day = start.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  if (event.all_day) return `${day}, all day`;
+  const time = (d) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const end = parseDate(event.end);
+  return end ? `${day}, ${time(start)} to ${time(end)}` : `${day}, ${time(start)}`;
+}
+
 export function chatGroup(value) {
   const days = daysAgo(parseDate(value) || new Date());
   if (days === 0) return "Today";

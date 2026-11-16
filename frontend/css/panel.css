@@ -76,6 +76,9 @@
 }
 
 .mail-row:hover { background: var(--paper); }
+
+.event-row { color: inherit; text-decoration: none; }
+.event-row .mail-row-from { grid-column: 1 / -1; }
 .mail-row[aria-current="true"] { background: var(--pen-wash); }
 
 .mail-row[data-unread]::before {

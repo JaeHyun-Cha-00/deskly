@@ -61,6 +61,12 @@ export function finishStep(view, step) {
   item.dataset.done = "";
   if (!step.result) return;
 
+  if (step.events?.length) {
+    const result = button("step-result", step.result, () => showPanel({ view: "events", step }, true));
+    result.title = "Show these events";
+    item.append(result);
+    return;
+  }
   if (!step.mails.length) {
     item.append(el("span", "step-result", step.result));
     return;

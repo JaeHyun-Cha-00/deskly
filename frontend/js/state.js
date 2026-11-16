@@ -4,7 +4,7 @@ export const state = {
   turns: [],
   chats: [],
   settings: {},
-  gmail: "checking",
+  apps: { gmail: "checking", calendar: "checking" },
   appName: "Deskly",
   modelKey: true,
   offline: false,

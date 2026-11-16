@@ -40,7 +40,7 @@ export async function readEvents(response, onEvent) {
 export function handleEvent(view, event) {
   const turn = view.turn;
   if (event.type === "step") {
-    const step = { id: event.id, label: event.label, done: false, tool: "", result: "", mails: [] };
+    const step = { id: event.id, label: event.label, done: false, tool: "", result: "", mails: [], events: [] };
     turn.steps.push(step);
     renderStep(view, step);
     // text before a step was the agent thinking aloud
@@ -50,7 +50,7 @@ export function handleEvent(view, event) {
   if (event.type === "step_done") {
     const step = turn.steps.find((s) => s.id === event.id);
     if (step) {
-      Object.assign(step, { done: true, tool: event.tool, result: event.result, mails: event.mails });
+      Object.assign(step, { done: true, tool: event.tool, result: event.result, mails: event.mails, events: event.events || [] });
       finishStep(view, step);
       renderCards(view);
       if (state.panel.view === "sources") renderPanel();

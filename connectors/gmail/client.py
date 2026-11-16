@@ -4,14 +4,13 @@ from functools import cache
 
 from googleapiclient.discovery import build
 
-from config import TOKEN_FILE
-from connectors.google_auth import forget_credentials, get_credentials
+from connectors.google_auth import forget_credentials, get_credentials, is_signed_in
 
 MAX_BODY_CHARS = 4000
 
 @cache
 def get_service():
-    return build("gmail", "v1", credentials=get_credentials())
+    return build("gmail", "v1", credentials=get_credentials("gmail"))
 
 def header(message, name):
     for h in message["payload"].get("headers", []):
@@ -38,8 +37,8 @@ def body_text(payload):
     return text[:MAX_BODY_CHARS]
 
 def is_connected():
-    return TOKEN_FILE.exists()
+    return is_signed_in("gmail")
 
 def sign_out():
-    forget_credentials()
+    forget_credentials("gmail")
     get_service.cache_clear()

@@ -1,6 +1,5 @@
 import threading
 from collections import defaultdict
-from datetime import date
 
 from agent.agent import build_agent, connected, stream_chat
 from backend import history, settings
@@ -14,13 +13,13 @@ locks = defaultdict(threading.Lock)
 
 def record(turn, event):
     if event["type"] == "step":
-        turn["steps"].append({"id": event["id"], "label": event["label"], "done": False, "tool": "", "result": "", "mails": []})
+        turn["steps"].append({"id": event["id"], "label": event["label"], "done": False, "tool": "", "result": "", "mails": [], "events": []})
         # text written before a step was the agent thinking aloud
         turn["draft"] = ""
     if event["type"] == "step_done":
         step = next((s for s in turn["steps"] if s["id"] == event["id"]), None)
         if step:
-            step.update(done=True, tool=event["tool"], result=event["result"], mails=event["mails"])
+            step.update(done=True, tool=event["tool"], result=event["result"], mails=event["mails"], events=event["events"])
     if event["type"] == "token":
         turn["draft"] += event["text"]
     if event["type"] == "answer":
@@ -35,7 +34,7 @@ def answer(chat_id, text, out):
         try:
             chosen = settings.load()
             apps = ("gmail",) if DEMO else connected()
-            runner = build_agent(chosen["length"], apps, DEMO, date.today())
+            runner = build_agent(chosen["length"], apps, DEMO)
             for event in stream_chat(history.messages(chat), text, runner):
                 if chat_id in stopping:
                     break

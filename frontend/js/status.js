@@ -1,6 +1,6 @@
 import { getJson } from "./api.js";
 import { showTitle } from "./chats.js";
-import { showGmail } from "./connectors.js";
+import { showApps } from "./connectors.js";
 import { $, sendButton, store } from "./dom.js";
 import { state } from "./state.js";
 
@@ -19,7 +19,7 @@ export async function loadStatus() {
     state.appName = status.app_name;
     $("brand").textContent = status.app_name;
     applyTheme(state.settings.theme);
-    showGmail(status.gmail);
+    showApps(status.apps);
   } catch {
     state.offline = true;
   }
@@ -37,7 +37,7 @@ export function showNotice() {
     action.textContent = "Try again";
     action.hidden = false;
   } else if (!state.modelKey) {
-    text = "Add your DeepInfra API key to .env as DEEPINFRA_API_KEY, then restart the app.";
+    text = "Add your OpenRouter API key to .env as OPENROUTER_API_KEY, then restart the app.";
   }
   notice.hidden = !text;
   $("notice-text").textContent = text;
