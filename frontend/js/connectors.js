@@ -1,15 +1,15 @@
 import { getJson } from "./api.js";
-import { $, toast } from "./dom.js";
+import { $, button, el, toast } from "./dom.js";
 import { closeDrawers } from "./panel.js";
 import { state } from "./state.js";
 
-export const APP_NAMES = { gmail: "Gmail", calendar: "Calendar" };
+export const APP_NAMES = { gmail: "Gmail", calendar: "Calendar", files: "Files" };
 
 const WORDS = {
   checking: { state: "Checking", action: "" },
   connected: { state: "Connected", action: "Disconnect" },
   not_connected: { state: "Not connected", action: "Connect" },
-  connecting: { state: "Waiting for Google", action: "Connect" },
+  connecting: { state: "Connecting", action: "Connect" },
   demo: { state: "Demo mail", action: "" },
   not_in_demo: { state: "Not in demo mode", action: "" },
 };
@@ -51,16 +51,45 @@ function showSummary() {
 }
 
 function showHints() {
-  const { gmail, calendar } = state.apps;
+  const { gmail, calendar, files } = state.apps;
   const things = [];
   if (isOn(gmail)) things.push("mail");
   if (isOn(calendar)) things.push("calendar");
-  $("input").placeholder = things.length ? `Ask about your ${things.join(" or ")}, or anything` : "Ask me anything";
+  if (isOn(files)) things.push("files");
+  // "mail, calendar or files"
+  const list = things.length > 1 ? `${things.slice(0, -1).join(", ")} or ${things.at(-1)}` : things[0];
+  $("input").placeholder = things.length ? `Ask about your ${list}, or anything` : "Ask me anything";
 
   $("demo-badge").hidden = gmail !== "demo";
   $("demo-note").hidden = gmail !== "demo";
   const checking = Object.values(state.apps).includes("checking");
   $("connect-callout").hidden = checking || Object.values(state.apps).some(isOn);
+}
+
+// one Connectors row for each MCP server the app knows about
+export function addServerRows(servers) {
+  const list = document.querySelector(".connector-list");
+  for (const server of servers) {
+    if ($(`connector-${server.id}`)) continue;
+    APP_NAMES[server.id] = server.name;
+    state.apps[server.id] = state.apps[server.id] || "checking";
+
+    const row = el("li", "connector");
+    row.id = `connector-${server.id}`;
+    row.dataset.state = "checking";
+    const mark = el("span", "connector-mark", server.name.slice(0, 1).toUpperCase());
+    mark.setAttribute("aria-hidden", "true");
+    const text = el("div", "connector-text");
+    text.append(el("span", "connector-name", server.name), el("span", "connector-about", server.about));
+    const action = el("div", "connector-action");
+    const status = el("span", "connector-state");
+    status.id = `${server.id}-state`;
+    const toggle = button("primary-button", "", () => toggleApp(server.id));
+    toggle.id = `${server.id}-action`;
+    action.append(status, toggle);
+    row.append(mark, text, action);
+    list.append(row);
+  }
 }
 
 export function openConnectors() {

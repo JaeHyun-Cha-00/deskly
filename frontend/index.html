@@ -155,20 +155,23 @@
           <span class="connector-mark" aria-hidden="true">C</span>
           <div class="connector-text">
             <span class="connector-name">Google Calendar</span>
-            <span class="connector-about">See your events and when you're free. I can't add, change or delete anything.</span>
+            <span class="connector-about">See your events and when you're free. Adding an event asks you first.</span>
           </div>
           <div class="connector-action">
             <span class="connector-state" id="calendar-state"></span>
             <button type="button" class="primary-button" id="calendar-action"></button>
           </div>
         </li>
-        <li class="connector" data-state="later">
+        <li class="connector" id="connector-files" data-state="checking">
           <span class="connector-mark" aria-hidden="true">F</span>
           <div class="connector-text">
             <span class="connector-name">Files on this laptop</span>
-            <span class="connector-about">Find and read files in folders you choose.</span>
+            <span class="connector-about">Find and read files in your home folder. Hidden files, Library and keys stay private. I can't change anything.</span>
           </div>
-          <div class="connector-action"><span class="connector-state">Coming later</span></div>
+          <div class="connector-action">
+            <span class="connector-state" id="files-state"></span>
+            <button type="button" class="primary-button" id="files-action"></button>
+          </div>
         </li>
       </ul>
     </div>

@@ -1,14 +1,16 @@
 import re
+import subprocess
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from agent import demo
 from backend.errors import friendly_error
 from backend.routes.status import app_states
 from config import DEMO
 from connectors.apps import APPS
+from connectors.files import client as files
+from connectors.files.guard import safe_path
 from connectors.gmail import read as gmail
-from connectors.google_auth import get_credentials
 
 router = APIRouter()
 
@@ -22,9 +24,9 @@ def check_app(app):
 def connect(app: str):
     check_app(app)
     try:
-        get_credentials(app)
+        APPS[app].connect()
     except Exception as error:
-        raise HTTPException(400, f"Google sign-in didn't finish ({type(error).__name__}). Try again.")
+        raise HTTPException(400, f"Connecting didn't finish ({type(error).__name__}). Try again.")
     return {"apps": app_states()}
 
 @router.post("/api/connectors/{app}/disconnect")
@@ -38,9 +40,22 @@ def mail(mail_id: str):
     if not MAIL_ID.fullmatch(mail_id):
         raise HTTPException(400, "That is not a mail id.")
     try:
-        found = demo.find(mail_id) if DEMO else gmail.read(mail_id)
+        found = demo.find(mail_id) if DEMO else gmail.message(mail_id)
     except Exception as error:
         raise HTTPException(502, friendly_error(error))
     if not found:
         raise HTTPException(404, "No mail with that id.")
     return found | {"demo": DEMO}
+
+@router.post("/api/files/reveal")
+async def reveal(request: Request):
+    # shows a file in Finder; the same checks as the agent's tools, so the page can't open more
+    if DEMO or not files.is_connected():
+        raise HTTPException(403, "Files aren't connected.")
+    path = str((await request.json()).get("path", ""))
+    try:
+        real = safe_path(path)
+    except (PermissionError, FileNotFoundError) as error:
+        raise HTTPException(400, str(error))
+    subprocess.run(["open", "-R", str(real)], check=False, timeout=10)
+    return {"ok": True}

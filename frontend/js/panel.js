@@ -1,7 +1,10 @@
-import { getJson } from "./api.js";
+import { getJson, sendJson } from "./api.js";
 import { eventTime, longDate, shortDate } from "./dates.js";
-import { $, ICONS, WIDE, app, button, el } from "./dom.js";
+import { $, ICONS, WIDE, app, button, el, toast } from "./dom.js";
 import { state } from "./state.js";
+
+// steps that opened mail ("read_email" is from chats saved before the thread tools)
+export const OPENED = new Set(["get_message", "get_thread", "get_draft", "read_email"]);
 
 export function uniqueMails(steps) {
   const found = new Map();
@@ -11,9 +14,9 @@ export function uniqueMails(steps) {
 
 export function chatMails() {
   const steps = state.turns.flatMap((turn) => turn.steps);
-  const opened = uniqueMails(steps.filter((s) => s.tool === "read_email"));
+  const opened = uniqueMails(steps.filter((s) => OPENED.has(s.tool)));
   const openedIds = new Set(opened.map((m) => m.id));
-  const found = uniqueMails(steps.filter((s) => s.tool !== "read_email")).filter((m) => !openedIds.has(m.id));
+  const found = uniqueMails(steps.filter((s) => !OPENED.has(s.tool))).filter((m) => !openedIds.has(m.id));
   return { opened, found };
 }
 
@@ -24,6 +27,14 @@ export function chatEvents() {
     for (const event of step.events || []) if (!found.has(event.id)) found.set(event.id, event);
   }
   return [...found.values()].sort((a, b) => a.start.localeCompare(b.start));
+}
+
+export function chatFiles() {
+  const found = new Map();
+  for (const step of state.turns.flatMap((turn) => turn.steps)) {
+    for (const file of step.files || []) if (!found.has(file.path)) found.set(file.path, file);
+  }
+  return [...found.values()];
 }
 
 export function panelIsOpen() {
@@ -52,20 +63,26 @@ export function renderPanel() {
     $("panel-title").textContent = "Sources";
     const { opened, found } = chatMails();
     const events = chatEvents();
+    const files = chatFiles();
     body.replaceChildren();
-    if (!opened.length && !found.length && !events.length) {
+    if (!opened.length && !found.length && !events.length && !files.length) {
       body.append(el("p", "panel-empty", "Everything I look at in this chat is listed here, so you can check what my answers are based on."));
     }
     if (opened.length) body.append(mailSection("Opened", opened));
     if (found.length) body.append(mailSection("Found in searches", found));
     if (events.length) body.append(eventSection("Events", events));
+    if (files.length) body.append(fileSection("Files", files));
+  }
+  if (view.view === "files") {
+    $("panel-title").textContent = "Files";
+    body.replaceChildren(el("p", "panel-note", view.step.label), fileSection(null, view.step.files));
   }
   if (view.view === "events") {
     $("panel-title").textContent = "Calendar";
     body.replaceChildren(el("p", "panel-note", view.step.label), eventSection(null, view.step.events));
   }
   if (view.view === "search") {
-    $("panel-title").textContent = "Search results";
+    $("panel-title").textContent = OPENED.has(view.step.tool) ? "Conversation" : "Search results";
     body.replaceChildren(el("p", "panel-note", view.step.label), mailSection(null, view.step.mails));
   }
   if (view.view === "mail") renderMail(view.id);
@@ -115,6 +132,41 @@ export function eventSection(title, events) {
       el("span", "mail-row-subject", eventTime(event)),
     );
     if (event.location) row.append(el("span", "mail-row-snippet", event.location));
+    const item = el("li");
+    item.append(row);
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
+function fileSize(size) {
+  if (size === null || size === undefined) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit += 1; }
+  return `${unit ? size.toFixed(1) : size} ${units[unit]}`;
+}
+
+export function fileSection(title, files) {
+  const section = el("section", "panel-section");
+  if (title) section.append(el("h3", "panel-section-title", `${title}, ${files.length}`));
+  const list = el("ul", "mail-list");
+  for (const file of files) {
+    // a row shows the file in Finder; the app checks the path again before opening anything
+    const row = button("mail-row file-row", undefined, async () => {
+      try {
+        await sendJson("/api/files/reveal", "POST", { path: file.path });
+      } catch (error) {
+        toast(`Couldn't show it: ${error.message}`);
+      }
+    });
+    row.title = "Show in Finder";
+    row.append(
+      el("span", "mail-row-from", file.name),
+      el("span", "mail-row-date", [file.kind, fileSize(file.size)].filter(Boolean).join(" · ")),
+      el("span", "mail-row-snippet", file.short),
+    );
     const item = el("li");
     item.append(row);
     list.append(item);

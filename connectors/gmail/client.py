@@ -36,6 +36,10 @@ def body_text(payload):
     text = re.sub(r"\s+", " ", plain or html).strip()
     return text[:MAX_BODY_CHARS]
 
+def connect():
+    # opens Google's sign-in the first time; later it reuses the saved sign-in
+    get_credentials("gmail")
+
 def is_connected():
     return is_signed_in("gmail")
 
