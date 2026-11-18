@@ -1,4 +1,3 @@
-import json
 from datetime import date, datetime
 
 from connectors.mcp.servers import SERVERS
@@ -16,9 +15,6 @@ def calendar_label(args):
     start, end = day_name(args.get("start_day", "")), day_name(args.get("end_day", ""))
     days = start if start == end else f"{start} to {end}"
     return f"Searched your calendar for “{query}”, {days}" if query else f"Looked at your calendar, {days}"
-
-# the demo's mail tools answer in JSON; every other tool's text is shown as it is
-DEMO_MAIL_TOOLS = {"search_threads", "get_thread", "get_message"}
 
 def mcp_tool(name):
     # "github_search_issues" becomes ("GitHub", "search issues") for an MCP server's tool
@@ -79,6 +75,10 @@ def step_label(call):
         return f"Searched your drafts for “{query}”" if query else "Looked at your drafts"
     if call["name"] == "get_draft":
         return "Opened a draft"
+    if call["name"] == "remember":
+        return "Saved to memory"
+    if call["name"] == "forget":
+        return "Removed from memory"
     found = mcp_tool(call["name"])
     if found:
         return f"Used {found[0]}: {found[1]}"
@@ -167,15 +167,9 @@ def step_result(tool, content, artifact=None):
         if len(cards) > 1:
             result += f" ({len(cards)} mails)"
         return done(result, cards, [])
+    if tool in ("remember", "forget") and artifact:
+        # the fact itself, so the user sees exactly what was kept or dropped
+        return done(f"“{artifact[0]['text']}”")
+    # any other tool: the first line is enough for the routing slip
     text = as_text(content).strip()
-    if tool not in DEMO_MAIL_TOOLS:
-        # the first line is enough for the routing slip
-        return done(text.splitlines()[0][:120] if text else "Done")
-    try:
-        data = json.loads(text)
-    except ValueError:
-        return done(text[:120])
-    if isinstance(data, list):
-        return done(f"{len(data)} mail" + ("" if len(data) == 1 else "s"), [mail_card(m) for m in data], [])
-    card = mail_card(data)
-    return done(f"{card['from']}: {card['subject']}".strip(": "), [card], [])
+    return done(text.splitlines()[0][:120] if text else "Done")

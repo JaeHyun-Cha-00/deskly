@@ -2,3 +2,4 @@ app_name: Deskly
 model: openai/gpt-oss-120b     # an OpenRouter chat model that supports tool calling
 temperature: 0.3
 max_tool_calls: 10             # per question
+context_tokens: 131072         # how much text the model can hold at once (gpt-oss-120b)

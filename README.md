@@ -15,7 +15,6 @@ A personal AI agent for the laptop. It starts with Gmail (read only) and will gr
 
 ```
 uv run python -m desktop                     # the app in its own window (the server runs inside it)
-ASSISTANT_DEMO=1 uv run python -m desktop    # the same with made-up mail (no Gmail sign-in)
 uv run python -m backend                     # the browser version: opens http://127.0.0.1:8765
 ASSISTANT_PORT=8766 uv run python -m backend # another port, if 8765 is taken
 uv run python -m agent                       # chat with the agent in the terminal
@@ -32,7 +31,7 @@ Each part has its own folder, and a part only uses the parts below it:
 desktop/      the app window (pywebview): starts the backend and shows the frontend in it
 frontend/     the screen (HTML, CSS, JS); talks to the backend over HTTP only
 backend/      the local web server: API routes, security, saved chats, settings
-agent/        the agent: model, prompt, tools, demo mail; knows nothing about the web
+agent/        the agent: model, prompt, tools, memory; knows nothing about the web
 connectors/   outside services: Google sign-in, Gmail API; knows nothing about the agent
 config.py     reads .env and config.yaml, shared by all
 ```

@@ -12,6 +12,7 @@ APP_DIR.chmod(0o700)
 
 CHATS_DIR = APP_DIR / "chats"
 SETTINGS_FILE = APP_DIR / "settings.json"
+MEMORY_FILE = APP_DIR / "memory.json"
 CREDENTIALS_FILE = APP_DIR / "credentials.json"
 
 # each app (gmail, calendar) keeps its own Google sign-in
@@ -22,8 +23,6 @@ load_dotenv(ROOT / ".env")
 
 with open(ROOT / "config.yaml") as f:
     config = yaml.safe_load(f)
-
-DEMO = os.getenv("ASSISTANT_DEMO") == "1"
 
 # only this laptop, never other computers on the network
 HOST = "127.0.0.1"

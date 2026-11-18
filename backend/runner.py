@@ -1,12 +1,13 @@
 import threading
+import time
 import uuid
 from collections import defaultdict
 
-from agent.agent import CHECKPOINTS, connected, get_agent, stream_chat
+from agent import memory
+from agent.agent import CHECKPOINTS, connected, get_agent, stream_chat, trim_old_results
 from backend import history, settings
 from backend.errors import friendly_error
 import event_loop
-from config import DEMO
 
 stopping = set()
 
@@ -24,7 +25,7 @@ def record(turn, event):
         # picking up a paused run sends the paused step again
         if any(s["id"] == event["id"] for s in turn["steps"]):
             return
-        turn["steps"].append({"id": event["id"], "label": event["label"], "done": False, "tool": "", "result": "", "mails": [], "events": [], "files": []})
+        turn["steps"].append({"id": event["id"], "label": event["label"], "done": False, "tool": event.get("tool", ""), "result": "", "mails": [], "events": [], "files": []})
         # text written before a step was the agent thinking aloud
         turn["draft"] = ""
     if event["type"] == "step_done":
@@ -37,6 +38,9 @@ def record(turn, event):
         turn["answer"] = event["text"]
     if event["type"] == "approval":
         turn["approval"] = {"requests": event["requests"], "state": "waiting"}
+    if event["type"] == "usage":
+        # the last model call holds the most, so it is the one to show
+        turn["context"] = {"tokens": event["tokens"], "limit": event["limit"]}
 
 def let_go(chat_id, chat):
     # a new question drops an answer that was still waiting for approval
@@ -55,8 +59,7 @@ def run(chat_id, chat, turn, run_id, make_events, out):
 
     async def follow():
         chosen = settings.load()
-        apps = ("gmail",) if DEMO else connected()
-        runner = await get_agent(chosen["length"], apps, DEMO)
+        runner = await get_agent(chosen["length"], connected(), use_memory=memory.is_on())
         async for event in make_events(runner):
             if chat_id in stopping:
                 return
@@ -71,6 +74,7 @@ def run(chat_id, chat, turn, run_id, make_events, out):
             out.put(event)
 
     finished = False
+    began = time.monotonic()
     try:
         event_loop.run(follow())
         finished = chat_id not in stopping
@@ -78,6 +82,8 @@ def run(chat_id, chat, turn, run_id, make_events, out):
         turn["error"] = friendly_error(error)
         out.put({"type": "error", "message": turn["error"]})
 
+    # time spent working; a paused answer adds the rest after the user decides
+    turn["seconds"] = round(turn.get("seconds", 0) + time.monotonic() - began, 1)
     waiting = seen["waiting"]
     if waiting and finished and not turn["error"]:
         paused[chat_id] = run_id
@@ -99,7 +105,7 @@ def run(chat_id, chat, turn, run_id, make_events, out):
     chat["turns"].append(turn)
     chat["title"] = chat["title"] or turn["user"][:60]
     history.save(chat)
-    out.put({"type": "done", "stopped": turn["stopped"], "waiting": waiting, "chat": {"id": chat["id"], "title": chat["title"], "updated": chat["updated"]}})
+    out.put({"type": "done", "stopped": turn["stopped"], "waiting": waiting, "seconds": turn["seconds"], "chat": {"id": chat["id"], "title": chat["title"], "updated": chat["updated"]}})
     out.put(None)
 
 def answer(chat_id, text, out):
@@ -108,7 +114,8 @@ def answer(chat_id, text, out):
         let_go(chat_id, chat)
         turn = {"user": text, "at": history.now(), "steps": [], "answer": "", "error": "", "stopped": False, "approval": None}
         run_id = str(uuid.uuid4())
-        past = history.messages(chat)
+        # the last question's results stay whole, for follow-ups like "what did the second one say?"
+        past = trim_old_results(history.messages(chat))
         run(chat_id, chat, turn, run_id, lambda runner: stream_chat(past, text, runner, run_id), out)
 
 def check_decisions(requests, decisions):

@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.routes import chats, connectors, status
+from backend.routes import chats, connectors, memory, status
 from backend.security import SECURITY_HEADERS, from_our_page
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
@@ -14,6 +14,7 @@ app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
 app.include_router(status.router)
 app.include_router(connectors.router)
 app.include_router(chats.router)
+app.include_router(memory.router)
 
 @app.middleware("http")
 async def only_our_page(request: Request, call_next):
