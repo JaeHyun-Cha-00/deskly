@@ -10,7 +10,7 @@ def connection(name, interactive=False):
     server = SERVERS[name]
     found = {"transport": "streamable_http", "url": server["url"]}
     if server["auth"] == "oauth":
-        found["auth"] = auth.provider(name, server["url"], interactive)
+        found["auth"] = auth.provider(name, server["url"], interactive, server.get("scope"))
     return found
 
 def is_write(tool):
