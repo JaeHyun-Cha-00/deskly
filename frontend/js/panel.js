@@ -1,5 +1,4 @@
 import { getJson, sendJson } from "./api.js";
-import { APP_NAMES } from "./connectors.js";
 import { eventTime, longDate, shortDate } from "./dates.js";
 import { $, ICONS, WIDE, app, button, el, toast } from "./dom.js";
 import { state } from "./state.js";
@@ -13,22 +12,9 @@ export function uniqueMails(steps) {
   return [...found.values()];
 }
 
-// which app each built-in tool belongs to; MCP tools start with their server's id ("github_...")
-const TOOL_APPS = {
-  gmail: ["search_threads", "get_thread", "get_message", "list_labels", "list_drafts", "get_draft", "read_email", "search_emails"],
-  calendar: ["list_events", "get_event", "list_calendars", "create_event"],
-  files: ["find_files", "list_folder", "read_file", "file_info", "disk_usage"],
-  memory: ["remember", "forget"],
-};
-const OTHER_NAMES = { memory: "Memory" };
-
+// the app a step belongs to; the server names it ("Gmail", "GitHub")
 export function stepApp(step) {
-  const tool = step.tool || "";
-  for (const [app, tools] of Object.entries(TOOL_APPS)) {
-    if (tools.includes(tool)) return OTHER_NAMES[app] || APP_NAMES[app] || app;
-  }
-  const server = Object.keys(APP_NAMES).find((id) => tool.startsWith(`${id}_`));
-  return server ? APP_NAMES[server] : "Other";
+  return step.app || "Other";
 }
 
 // the apps one answer used, in the order it first used them

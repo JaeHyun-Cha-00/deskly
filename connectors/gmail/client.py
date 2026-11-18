@@ -6,6 +6,11 @@ from googleapiclient.discovery import build
 
 from connectors.google_auth import forget_credentials, get_credentials, is_signed_in
 
+# how it shows in Connectors
+NAME = "Gmail"
+ABOUT = "Search and read your mail. I can't send, delete or change anything."
+GROUP = "Google"
+
 MAX_BODY_CHARS = 4000
 
 @cache

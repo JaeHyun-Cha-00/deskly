@@ -4,6 +4,11 @@ from googleapiclient.discovery import build
 
 from connectors.google_auth import forget_credentials, get_credentials, is_signed_in
 
+# how it shows in Connectors
+NAME = "Google Calendar"
+ABOUT = "See your events. Adding an event asks you first."
+GROUP = "Google"
+
 @cache
 def get_service():
     return build("calendar", "v3", credentials=get_credentials("calendar"))

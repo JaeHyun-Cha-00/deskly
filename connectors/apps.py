@@ -12,5 +12,9 @@ APPS = {
     **mcp_apps(),
 }
 
+def rows():
+    # the Connectors window's rows, in this order
+    return [{"id": name, "name": app.NAME, "about": app.ABOUT, "group": app.GROUP} for name, app in APPS.items()]
+
 def connected():
     return tuple(name for name, client in APPS.items() if client.is_connected())

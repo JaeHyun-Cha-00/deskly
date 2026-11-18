@@ -43,7 +43,7 @@ export function handleEvent(view, event) {
   // picking up a paused answer sends the paused step again
   if (event.type === "step" && turn.steps.some((s) => s.id === event.id)) return;
   if (event.type === "step") {
-    const step = { id: event.id, label: event.label, done: false, tool: event.tool || "", result: "", mails: [], events: [], files: [] };
+    const step = { id: event.id, label: event.label, done: false, tool: event.tool || "", app: event.app || "", result: "", mails: [], events: [], files: [] };
     turn.steps.push(step);
     renderStep(view, step);
     // text before a step was the agent thinking aloud
@@ -53,7 +53,7 @@ export function handleEvent(view, event) {
   if (event.type === "step_done") {
     const step = turn.steps.find((s) => s.id === event.id);
     if (step) {
-      Object.assign(step, { done: true, tool: event.tool, result: event.result, mails: event.mails, events: event.events || [], files: event.files || [] });
+      Object.assign(step, { done: true, tool: event.tool, app: event.app || step.app, result: event.result, mails: event.mails, events: event.events || [], files: event.files || [] });
       finishStep(view, step);
       renderCards(view);
       if (state.panel.view === "sources") renderPanel();

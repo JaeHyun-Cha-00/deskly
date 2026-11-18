@@ -1,6 +1,6 @@
 import { getJson } from "./api.js";
 import { showTitle } from "./chats.js";
-import { addServerRows, showApps } from "./connectors.js";
+import { addRows, showApps } from "./connectors.js";
 import { $, sendButton, store } from "./dom.js";
 import { state } from "./state.js";
 
@@ -28,7 +28,7 @@ export async function loadStatus() {
     $("brand").textContent = status.app_name;
     applyTheme(state.settings.theme);
     applySeeThrough(state.settings);
-    addServerRows(status.mcp || []);
+    addRows(status.connectors || []);
     showApps(status.apps);
   } catch {
     state.offline = true;

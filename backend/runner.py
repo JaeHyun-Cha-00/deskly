@@ -7,7 +7,7 @@ from agent import memory
 from agent.agent import CHECKPOINTS, connected, get_agent, stream_chat, trim_old_results
 from backend import history, settings
 from backend.errors import friendly_error
-import event_loop
+from connectors import event_loop
 
 stopping = set()
 
@@ -25,7 +25,7 @@ def record(turn, event):
         # picking up a paused run sends the paused step again
         if any(s["id"] == event["id"] for s in turn["steps"]):
             return
-        turn["steps"].append({"id": event["id"], "label": event["label"], "done": False, "tool": event.get("tool", ""), "result": "", "mails": [], "events": [], "files": []})
+        turn["steps"].append({"id": event["id"], "label": event["label"], "done": False, "tool": event.get("tool", ""), "app": event.get("app", ""), "result": "", "mails": [], "events": [], "files": []})
         # text written before a step was the agent thinking aloud
         turn["draft"] = ""
     if event["type"] == "step_done":

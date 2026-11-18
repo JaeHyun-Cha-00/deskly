@@ -4,8 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from backend import settings
 from config import config
-from connectors.apps import APPS
-from connectors.mcp.servers import SERVERS
+from connectors.apps import APPS, rows
 
 router = APIRouter()
 
@@ -20,8 +19,8 @@ def status():
     return {
         "app_name": config.get("app_name", "Assistant"),
         "apps": app_states(),
-        # the MCP servers, so the screen can show a Connectors row for each
-        "mcp": [{"id": name, "name": s["name"], "about": s["about"]} for name, s in SERVERS.items()],
+        # every app, so the screen can build the Connectors window
+        "connectors": rows(),
         "model_key": bool(os.getenv("OPENROUTER_API_KEY")),
         # window settings (opacity) only exist in the desktop app
         "desktop": os.getenv("ASSISTANT_DESKTOP") == "1",

@@ -2,7 +2,7 @@ import asyncio
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-import event_loop
+from connectors import event_loop
 from connectors.mcp import auth
 from connectors.mcp.servers import SERVERS
 
@@ -38,8 +38,13 @@ ON_DIR = auth.TOKENS_DIR
 
 class McpApp:
     # one MCP server as a Connectors app: connect, check, disconnect
+    GROUP = "Other apps"
+
     def __init__(self, name):
         self.name = name
+        # how it shows in Connectors
+        self.NAME = SERVERS[name]["name"]
+        self.ABOUT = SERVERS[name]["about"]
 
     def on_file(self):
         return ON_DIR / f"{self.name}.on"

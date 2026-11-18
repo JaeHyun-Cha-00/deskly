@@ -9,11 +9,9 @@ from langgraph.types import Command
 
 from agent import memory
 from agent.prompts import system_prompt
-from agent.steps import approval_text, step_label, step_result
-from agent.tools import WRITE_TOOLS, tools_for
-from agent.tools.memory import MEMORY_TOOLS
-import event_loop
+from agent.tools import APPS, WRITE_TOOLS, app_name, approval_text, step_label, step_result, tools_for
 from config import config
+from connectors import event_loop
 from connectors.apps import connected
 from connectors.mcp.client import load_tools
 from connectors.mcp.servers import SERVERS
@@ -87,7 +85,7 @@ async def get_agent(length="short", connectors=(), use_memory=False):
         return AGENTS[key]
     tools = tools_for(connectors)
     if use_memory:
-        tools = tools + MEMORY_TOOLS
+        tools = tools + APPS["memory"].TOOLS
     writes = set(WRITE_TOOLS)
     failed = []
     servers = [name for name in connectors if name in SERVERS]
@@ -176,10 +174,10 @@ async def stream_chat(messages, text, runner, run_id, decisions=None):
                         yield {"type": "usage", "tokens": message.usage_metadata["total_tokens"], "limit": config["context_tokens"]}
                     if isinstance(message, ToolMessage):
                         cards = step_result(message.name, message.content, message.artifact)
-                        yield {"type": "step_done", "id": message.tool_call_id, "tool": message.name, **cards}
+                        yield {"type": "step_done", "id": message.tool_call_id, "tool": message.name, "app": app_name(message.name), **cards}
                     elif isinstance(message, AIMessage) and message.tool_calls:
                         for call in message.tool_calls:
-                            yield {"type": "step", "id": call["id"], "label": step_label(call), "tool": call["name"]}
+                            yield {"type": "step", "id": call["id"], "label": step_label(call), "tool": call["name"], "app": app_name(call["name"])}
                     elif isinstance(message, AIMessage) and message.content:
                         yield {"type": "answer", "text": message.content.strip()}
 

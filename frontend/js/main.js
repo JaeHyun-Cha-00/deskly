@@ -1,5 +1,5 @@
 import { loadChats, newChat, showChat, startRename } from "./chats.js";
-import { APP_NAMES, openConnectors, toggleApp } from "./connectors.js";
+import { openConnectors } from "./connectors.js";
 import { $, IS_MAC, MOD, WIDE, app, input, isTyping, palette } from "./dom.js";
 import { loadMemory } from "./memory.js";
 import { openPalette } from "./palette.js";
@@ -14,7 +14,6 @@ $("open-settings").addEventListener("click", openSettings);
 $("callout-connectors").addEventListener("click", openConnectors);
 $("open-connectors").addEventListener("click", openConnectors);
 $("close-connectors").addEventListener("click", () => $("connectors").close());
-Object.keys(APP_NAMES).forEach((name) => $(`${name}-action`).addEventListener("click", () => toggleApp(name)));
 $("chat-title").addEventListener("click", startRename);
 $("toggle-panel").addEventListener("click", () => setPanel(!panelIsOpen()));
 $("panel-close").addEventListener("click", () => setPanel(false));

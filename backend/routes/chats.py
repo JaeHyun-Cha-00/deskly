@@ -5,6 +5,7 @@ import threading
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from agent.tools import app_name
 from backend import history, runner
 
 router = APIRouter()
@@ -28,6 +29,10 @@ def chats():
 @router.get("/api/chats/{chat_id}")
 def open_chat(chat_id: str):
     chat = history.load(chat_id_or_400(chat_id))
+    # steps saved before steps knew their app get it now
+    for turn in chat["turns"]:
+        for step in turn["steps"]:
+            step.setdefault("app", app_name(step.get("tool", "")))
     return {key: chat[key] for key in ("id", "title", "updated", "turns")}
 
 @router.patch("/api/chats/{chat_id}")

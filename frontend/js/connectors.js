@@ -3,7 +3,8 @@ import { $, button, el, toast } from "./dom.js";
 import { closeDrawers } from "./panel.js";
 import { state } from "./state.js";
 
-export const APP_NAMES = { gmail: "Gmail", calendar: "Calendar", files: "Files" };
+// app id -> the name shown, filled from the server's list
+export const APP_NAMES = {};
 
 const WORDS = {
   checking: { state: "Checking", action: "" },
@@ -28,7 +29,6 @@ function drawMark(mark, name) {
   if (MARKS[app]) mark.innerHTML = `<svg viewBox="0 0 24 24">${MARKS[app]}</svg>`;
   else mark.textContent = name.slice(0, 1).toUpperCase();
 }
-document.querySelectorAll(".connector-mark").forEach((mark) => drawMark(mark, mark.dataset.app));
 
 export function showApps(apps) {
   state.apps = { ...state.apps, ...apps };
@@ -41,6 +41,7 @@ export function showApps(apps) {
 // one row in the Connectors popup
 function showApp(name, value) {
   const words = WORDS[value];
+  if (!$(`connector-${name}`)) return;
   $(`connector-${name}`).dataset.state = value;
   $(`${name}-state`).textContent = words.state;
   const action = $(`${name}-action`);
@@ -82,32 +83,47 @@ function showHints() {
   $("connect-callout").hidden = checking || Object.values(state.apps).some(isOn);
 }
 
-// one Connectors row for each MCP server the app knows about
-export function addServerRows(servers) {
-  const list = $("server-list");
-  for (const server of servers) {
-    if ($(`connector-${server.id}`)) continue;
-    APP_NAMES[server.id] = server.name;
-    state.apps[server.id] = state.apps[server.id] || "checking";
-
-    const row = el("li", "connector");
-    row.id = `connector-${server.id}`;
-    row.dataset.state = "checking";
-    const mark = el("span", "connector-mark");
-    mark.dataset.app = server.id;
-    mark.setAttribute("aria-hidden", "true");
-    drawMark(mark, server.name);
-    const title = el("span", "connector-title");
-    const status = el("span", "connector-state");
-    status.id = `${server.id}-state`;
-    title.append(el("span", "connector-name", server.name), status);
-    const text = el("div", "connector-text");
-    text.append(title, el("span", "connector-about", server.about));
-    const toggle = button("connector-button", "", () => toggleApp(server.id));
-    toggle.id = `${server.id}-action`;
-    row.append(mark, text, toggle);
-    list.append(row);
+// the Connectors window: a group ("Google", "On this laptop", "Other apps") and a row per app
+export function addRows(rows) {
+  const groups = $("connector-groups");
+  for (const row of rows) {
+    if ($(`connector-${row.id}`)) continue;
+    APP_NAMES[row.id] = row.name;
+    state.apps[row.id] = state.apps[row.id] || "checking";
+    groupList(groups, row.group).append(appRow(row));
   }
+}
+
+function groupList(groups, name) {
+  // the list for one group, made the first time it is needed
+  let section = [...groups.children].find((child) => child.dataset.group === name);
+  if (!section) {
+    section = el("section", "connector-group");
+    section.dataset.group = name;
+    section.append(el("h3", null, name), el("ul", "connector-list"));
+    groups.append(section);
+  }
+  return section.querySelector(".connector-list");
+}
+
+function appRow(app) {
+  const row = el("li", "connector");
+  row.id = `connector-${app.id}`;
+  row.dataset.state = "checking";
+  const mark = el("span", "connector-mark");
+  mark.dataset.app = app.id;
+  mark.setAttribute("aria-hidden", "true");
+  drawMark(mark, app.name);
+  const title = el("span", "connector-title");
+  const status = el("span", "connector-state");
+  status.id = `${app.id}-state`;
+  title.append(el("span", "connector-name", app.name), status);
+  const text = el("div", "connector-text");
+  text.append(title, el("span", "connector-about", app.about));
+  const toggle = button("connector-button", "", () => toggleApp(app.id));
+  toggle.id = `${app.id}-action`;
+  row.append(mark, text, toggle);
+  return row;
 }
 
 // The window has two views: "mine" lists the connected apps; "add" lists the rest to connect.
