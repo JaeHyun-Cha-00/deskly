@@ -5,9 +5,12 @@ from config import SETTINGS_FILE
 CHOICES = {
     "theme": ["system", "light", "dark"],
     "length": ["short", "detailed"],
+    # how see-through the desktop window's backgrounds and text are, in percent
+    "background": [str(n) for n in range(30, 101, 10)],
+    "text": [str(n) for n in range(30, 101, 10)],
 }
 
-DEFAULTS = {"theme": "system", "length": "short"}
+DEFAULTS = {"theme": "system", "length": "short", "background": "100", "text": "100"}
 
 def load():
     saved = json.loads(SETTINGS_FILE.read_text()) if SETTINGS_FILE.exists() else {}

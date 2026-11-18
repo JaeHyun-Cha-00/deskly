@@ -7,6 +7,7 @@ export const state = {
   apps: { gmail: "checking", calendar: "checking", files: "checking" },
   appName: "Deskly",
   modelKey: true,
+  desktop: false,
   offline: false,
   busy: false,
   controller: null,

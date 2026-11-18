@@ -1,6 +1,6 @@
 :root {
-  --paper: #EEF1F4;  --sheet: #F8FAFB;  --ink: #1C2738;  --ink-soft: #5A6A7E;  --rule: #C8D0DA;  --rule-soft: #DDE3EA;
-  --pen: #2648C9;  --pen-wash: #DDE4FA;
+  --paper-solid: #EEF1F4;  --sheet-solid: #F8FAFB;  --ink-solid: #1C2738;  --ink-soft-solid: #5A6A7E;  --rule-solid: #C8D0DA;  --rule-soft-solid: #DDE3EA;
+  --pen: #2648C9;  --pen-wash-solid: #DDE4FA;
   --ok: #2F7A4F;
   --danger: #A8322A;
   --shadow: 0 12px 40px rgb(28 39 56 / 0.16), 0 2px 6px rgb(28 39 56 / 0.08);
@@ -25,14 +25,14 @@
 }
 
 :root[data-theme="dark"] {
-  --paper: #121820;
-  --sheet: #18202B;
-  --ink: #E4E9F0;
-  --ink-soft: #9AA8B8;
-  --rule: #2E3A49;
-  --rule-soft: #253040;
+  --paper-solid: #121820;
+  --sheet-solid: #18202B;
+  --ink-solid: #E4E9F0;
+  --ink-soft-solid: #9AA8B8;
+  --rule-solid: #2E3A49;
+  --rule-soft-solid: #253040;
   --pen: #86A0FF;
-  --pen-wash: #24305A;
+  --pen-wash-solid: #24305A;
   --ok: #6FC593;
   --danger: #F09A92;
   --shadow: 0 12px 40px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
@@ -41,19 +41,42 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #121820;
-    --sheet: #18202B;
-    --ink: #E4E9F0;
-    --ink-soft: #9AA8B8;
-    --rule: #2E3A49;
-    --rule-soft: #253040;
+    --paper-solid: #121820;
+    --sheet-solid: #18202B;
+    --ink-solid: #E4E9F0;
+    --ink-soft-solid: #9AA8B8;
+    --rule-solid: #2E3A49;
+    --rule-soft-solid: #253040;
     --pen: #86A0FF;
-    --pen-wash: #24305A;
+    --pen-wash-solid: #24305A;
     --ok: #6FC593;
     --danger: #F09A92;
     --shadow: 0 12px 40px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
     color-scheme: dark;
   }
+}
+
+/* The window can be see-through (desktop app, Settings > Appearance): the backgrounds and the
+   text each have their own opacity. Both stay 100% unless the user changes them. */
+:root {
+  --bg-op: 100%;
+  --text-op: 100%;
+}
+
+/* pop-up windows and toasts stay solid, so they are always easy to read */
+dialog, .toast {
+  --bg-op: 100%;
+  --text-op: 100%;
+}
+
+:root, dialog, .toast {
+  --paper: color-mix(in srgb, var(--paper-solid) var(--bg-op), transparent);
+  --sheet: color-mix(in srgb, var(--sheet-solid) var(--bg-op), transparent);
+  --pen-wash: color-mix(in srgb, var(--pen-wash-solid) var(--bg-op), transparent);
+  --ink: color-mix(in srgb, var(--ink-solid) var(--text-op), transparent);
+  --ink-soft: color-mix(in srgb, var(--ink-soft-solid) var(--text-op), transparent);
+  --rule: color-mix(in srgb, var(--rule-solid) var(--text-op), transparent);
+  --rule-soft: color-mix(in srgb, var(--rule-soft-solid) var(--text-op), transparent);
 }
 
 *, *::before, *::after { box-sizing: border-box; }

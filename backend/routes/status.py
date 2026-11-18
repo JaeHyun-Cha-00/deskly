@@ -3,16 +3,13 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 
 from backend import settings
-from config import DEMO, config
+from config import config
 from connectors.apps import APPS
 from connectors.mcp.servers import SERVERS
 
 router = APIRouter()
 
 def app_state(name):
-    # demo mode has made-up mail and no calendar
-    if DEMO:
-        return "demo" if name == "gmail" else "not_in_demo"
     return "connected" if APPS[name].is_connected() else "not_connected"
 
 def app_states():
@@ -26,6 +23,8 @@ def status():
         # the MCP servers, so the screen can show a Connectors row for each
         "mcp": [{"id": name, "name": s["name"], "about": s["about"]} for name, s in SERVERS.items()],
         "model_key": bool(os.getenv("OPENROUTER_API_KEY")),
+        # window settings (opacity) only exist in the desktop app
+        "desktop": os.getenv("ASSISTANT_DESKTOP") == "1",
         "settings": settings.load(),
     }
 
