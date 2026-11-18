@@ -1,4 +1,5 @@
 import { getJson, sendJson } from "./api.js";
+import { APP_NAMES } from "./connectors.js";
 import { eventTime, longDate, shortDate } from "./dates.js";
 import { $, ICONS, WIDE, app, button, el, toast } from "./dom.js";
 import { state } from "./state.js";
@@ -10,6 +11,29 @@ export function uniqueMails(steps) {
   const found = new Map();
   for (const step of steps) for (const mail of step.mails) if (!found.has(mail.id)) found.set(mail.id, mail);
   return [...found.values()];
+}
+
+// which app each built-in tool belongs to; MCP tools start with their server's id ("github_...")
+const TOOL_APPS = {
+  gmail: ["search_threads", "get_thread", "get_message", "list_labels", "list_drafts", "get_draft", "read_email", "search_emails"],
+  calendar: ["list_events", "get_event", "list_calendars", "create_event"],
+  files: ["find_files", "list_folder", "read_file", "file_info", "disk_usage"],
+  memory: ["remember", "forget"],
+};
+const OTHER_NAMES = { memory: "Memory" };
+
+export function stepApp(step) {
+  const tool = step.tool || "";
+  for (const [app, tools] of Object.entries(TOOL_APPS)) {
+    if (tools.includes(tool)) return OTHER_NAMES[app] || APP_NAMES[app] || app;
+  }
+  const server = Object.keys(APP_NAMES).find((id) => tool.startsWith(`${id}_`));
+  return server ? APP_NAMES[server] : "Other";
+}
+
+// the apps one answer used, in the order it first used them
+export function stepApps(steps) {
+  return [...new Set(steps.map(stepApp))];
 }
 
 export function chatMails() {
@@ -73,6 +97,10 @@ export function renderPanel() {
     if (events.length) body.append(eventSection("Events", events));
     if (files.length) body.append(fileSection("Files", files));
   }
+  if (view.view === "turn") {
+    $("panel-title").textContent = "What I looked at";
+    body.replaceChildren(turnSteps(view.turn));
+  }
   if (view.view === "files") {
     $("panel-title").textContent = "Files";
     body.replaceChildren(el("p", "panel-note", view.step.label), fileSection(null, view.step.files));
@@ -87,6 +115,44 @@ export function renderPanel() {
   }
   if (view.view === "mail") renderMail(view.id);
   markOpenMail();
+}
+
+// one answer's steps, grouped by app; each finished step can open what it found
+function turnSteps(turn) {
+  const wrap = el("div", "turn-steps");
+  wrap.append(el("p", "panel-note", `For “${turn.user.length > 80 ? `${turn.user.slice(0, 80)}…` : turn.user}”`));
+  for (const app of stepApps(turn.steps)) {
+    const section = el("section", "panel-section");
+    section.append(el("h3", "panel-section-title", app));
+    const list = el("ol", "step-list");
+    for (const step of turn.steps.filter((s) => stepApp(s) === app)) {
+      const item = el("li", "step");
+      if (step.done) item.dataset.done = "";
+      item.append(el("span", "step-label", step.label));
+      if (step.done && step.result) item.append(stepResult(step));
+      list.append(item);
+    }
+    section.append(list);
+    wrap.append(section);
+  }
+  return wrap;
+}
+
+function stepResult(step) {
+  const back = state.panel;
+  if (step.files?.length) return resultButton(step, "Show these files", () => showPanel({ view: "files", step, back }, true));
+  if (step.events?.length) return resultButton(step, "Show these events", () => showPanel({ view: "events", step, back }, true));
+  if (!step.mails?.length) return el("span", "step-result", step.result);
+  // one opened mail opens itself; a conversation or a search shows its list
+  const opened = OPENED.has(step.tool) && step.mails.length === 1;
+  return resultButton(step, opened ? "Show this mail" : "Show what this search found",
+    () => (opened ? openMail(step.mails[0].id) : showPanel({ view: "search", step, back }, true)));
+}
+
+function resultButton(step, title, onClick) {
+  const result = button("step-result", step.result, onClick);
+  result.title = title;
+  return result;
 }
 
 export function mailSection(title, mails) {
@@ -209,16 +275,12 @@ export async function renderMail(id) {
   memo.append(fields, el("div", "memo-body", mail.body || "(This mail has no text.)"));
 
   const foot = el("footer", "memo-foot");
-  if (mail.demo) {
-    foot.append(el("p", "panel-note", "A made-up mail for demo mode."));
-  } else {
-    const link = el("a", "quiet-button");
-    link.href = `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(mail.id)}`;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.innerHTML = `${ICONS.external}<span>Open in Gmail</span>`;
-    foot.append(link);
-  }
+  const link = el("a", "quiet-button");
+  link.href = `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(mail.id)}`;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.innerHTML = `${ICONS.external}<span>Open in Gmail</span>`;
+  foot.append(link);
   memo.append(foot);
   body.replaceChildren(memo);
   body.scrollTop = 0;

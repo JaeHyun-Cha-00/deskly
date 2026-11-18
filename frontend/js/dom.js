@@ -19,6 +19,7 @@ export const WIDE = window.matchMedia("(min-width: 1180px)");
 export const ICONS = {
   close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10.5 10.5v5M13.5 10.5v5"/></svg>',
   external: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
 };
 
@@ -40,13 +41,21 @@ export function store(key, value) {
   try { localStorage.setItem(key, value); } catch {}
 }
 
-export function toast(text) {
+// a short message at the top; with an action (e.g. Undo) it stays a little longer
+export function toast(text, action) {
   const node = el("div", "toast", text);
-  $("toasts").append(node);
+  if (action) {
+    node.append(button("toast-action", action.label, () => {
+      node.remove();
+      action.onClick();
+    }));
+  }
+  // one at a time: a new message replaces the last one
+  $("toasts").replaceChildren(node);
   setTimeout(() => {
     node.dataset.leaving = "";
     setTimeout(() => node.remove(), 260);
-  }, 2400);
+  }, action ? 5000 : 2400);
 }
 
 export function isTyping(target) {

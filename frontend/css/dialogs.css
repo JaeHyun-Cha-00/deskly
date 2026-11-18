@@ -185,15 +185,7 @@ select {
   background: var(--paper);
 }
 
-.keys {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.45rem 1.25rem;
-  margin: 0;
-  font-size: var(--step--1);
-}
 
-.keys dt, .keys dd { margin: 0; }
 
 .toasts {
   position: fixed;
@@ -231,7 +223,7 @@ select {
 }
 
 .connectors-summary { font-size: var(--step--2); }
-.connector-state { font-size: var(--step--1); }
+.connector-state { font-size: var(--step--2); }
 
 .connectors-summary::before,
 .connector-state::before {
@@ -248,11 +240,9 @@ select {
 .connector[data-state="not_connected"] .connector-state::before { border-color: var(--pen); }
 .connectors-summary[data-state="connecting"]::before,
 .connector[data-state="connecting"] .connector-state::before { border-color: var(--pen); animation: pulse 1.1s ease-in-out infinite; }
-.connectors-summary[data-state="demo"]::before,
-.connector[data-state="demo"] .connector-state::before { background: var(--pen-wash); border-color: var(--pen); }
 .connector[data-state="later"] .connector-state::before { border-style: dashed; }
 
-.connectors { width: min(34rem, calc(100vw - 32px)); }
+.connectors { width: min(36rem, calc(100vw - 32px)); }
 
 .connectors-intro {
   margin: 0;
@@ -261,59 +251,167 @@ select {
   font-size: var(--step--1);
 }
 
-.connector-list {
-  margin: 0;
-  padding: 0.5rem 1.5rem 1.25rem;
-  list-style: none;
+.connector-group { padding: 0.75rem 1.5rem 0; }
+.connector-group:last-child { padding-bottom: 1rem; }
+.connector-group h3 {
+  margin: 0 0 0.1rem;
+  font-size: var(--step--2);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
+
+.connector-list { margin: 0; padding: 0; list-style: none; }
 
 .connector {
   display: grid;
-  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  grid-template-columns: 2.25rem minmax(0, 1fr) 7rem;
   align-items: center;
   gap: 0.9rem;
-  padding: 0.9rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--rule-soft);
 }
-
 .connector:last-child { border-bottom: 0; }
 
 .connector-mark {
   display: grid;
   place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border: 1px solid var(--rule);
   border-radius: 9px;
   background: var(--paper);
+  color: var(--ink-soft);
   font-family: var(--letter);
-  font-size: 1.1rem;
   font-weight: 600;
 }
-
-.connector[data-state="connected"] .connector-mark { border-color: var(--ok); }
-.connector[data-state="later"] .connector-mark,
-.connector[data-state="later"] .connector-name { color: var(--ink-soft); }
+.connector-mark svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.connector[data-state="connected"] .connector-mark { border-color: var(--ok); color: var(--ok); }
 
 .connector-text { display: grid; gap: 0.1rem; min-width: 0; }
+.connector-title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem 0.6rem; }
 .connector-name { font-weight: 500; }
 .connector-about { font-size: var(--step--1); color: var(--ink-soft); }
+.connector[data-state="connected"] .connector-state { color: var(--ok); }
 
-.connector-action {
-  display: grid;
-  justify-items: end;
-  gap: 0.4rem;
-}
-
-.connector[data-state="connected"] .connector-state { color: var(--ok); font-weight: 500; }
-
-.connector[data-state="connected"] .primary-button {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--rule);
-  background: var(--sheet);
-  color: var(--ink);
+/* one button per row, always the same size: Connect is filled, Disconnect is quiet */
+.connector-button {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--pen);
+  border-radius: 8px;
+  background: var(--pen);
+  color: var(--sheet);
   font-size: var(--step--1);
-  font-weight: 400;
+  font-weight: 500;
+}
+.connector-button:hover { filter: brightness(1.08); }
+.connector-button:disabled { opacity: 0.6; cursor: progress; }
+.connector-button[data-kind="quiet"] { border-color: var(--rule); background: none; color: var(--ink-soft); font-weight: 400; }
+.connector-button[data-kind="quiet"]:hover { border-color: var(--danger); color: var(--danger); filter: none; }
+
+/* Memory */
+.memory-count { color: var(--ink-soft); font-size: var(--step--1); }
+
+.memory-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.9rem 1.5rem 0.25rem;
+  font-size: var(--step--1);
+}
+.memory-switch input { width: 1rem; height: 1rem; accent-color: var(--pen); }
+
+.memory-empty {
+  margin: 0.75rem 1.5rem;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--pen-wash);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
 }
 
-.connector[data-state="connected"] .primary-button:hover { border-color: var(--danger); color: var(--danger); filter: none; }
+.memory-list { margin: 0; padding: 0.25rem 1.5rem 0; list-style: none; }
+
+.memory-fact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.memory-text { display: grid; gap: 0.1rem; min-width: 0; }
+.memory-sentence { font-family: var(--letter); overflow-wrap: anywhere; }
+.memory-when { font-size: var(--step--2); color: var(--ink-soft); }
+.memory-actions { display: flex; gap: 0.1rem; }
+.memory-actions .quiet-button { margin-left: 0; }
+.quiet-button.danger:hover { color: var(--danger); }
+
+.memory-field {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--pen);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.memory-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.5rem 1.2rem;
+}
+.memory-limit { color: var(--ink-soft); font-size: var(--step--1); }
+
+/* Connectors: "mine" shows connected apps, "add" shows the rest */
+.connectors-back { display: none; margin-left: -0.4rem; }
+.connectors[data-view="add"] .connectors-back { display: grid; }
+.connectors .settings-head h2 { flex: 1; }
+.connectors[data-view="mine"] .connector:not([data-state="connected"]),
+.connectors[data-view="add"] .connector[data-state="connected"] { display: none; }
+.connectors[data-view="mine"] .connector-group:not(:has(.connector[data-state="connected"])),
+.connectors[data-view="add"] .connector-group:not(:has(.connector:not([data-state="connected"]))) { display: none; }
+.connectors .connector-state { display: none; }
+.connectors .connector[data-state="connecting"] .connector-state { display: inline-flex; }
+
+.connectors-empty {
+  margin: 0.75rem 1.5rem 0;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--pen-wash);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+
+.connectors-foot { padding: 0.25rem 1.5rem 1.25rem; }
+.connectors-foot .plain-button { display: inline-flex; align-items: center; gap: 0.45rem; }
+.connectors-foot svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+
+.plain-button:disabled { opacity: 0.45; cursor: default; border-color: var(--rule); }
+
+/* See-through sliders (Settings > Appearance, desktop app only) */
+.sliders { display: grid; gap: 0.5rem; }
+.slider {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr) 3rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--step--1);
+}
+.slider input { width: 100%; accent-color: var(--pen); }
+.slider output { color: var(--ink-soft); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* a toast with an action, e.g. "Chat deleted  Undo" */
+.toast { display: flex; align-items: center; gap: 1rem; }
+.toast-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  pointer-events: auto;
+}

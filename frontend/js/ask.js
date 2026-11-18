@@ -1,10 +1,11 @@
 import { HEADERS, api } from "./api.js";
 import { loadChats, showTitle } from "./chats.js";
 import { emptyEl, form, input, sendButton } from "./dom.js";
+import { loadMemory } from "./memory.js";
 import { renderPanel } from "./panel.js";
 import { state } from "./state.js";
 import { loadStatus, showNotice } from "./status.js";
-import { addUserMessage, createTurnView, finishStep, renderAnswer, renderApproval, renderCards, renderError, renderStep, scrollToEnd, setWaiting, showStopped, streamToken } from "./turns.js";
+import { addUserMessage, createTurnView, finishStep, renderAnswer, renderApproval, renderCards, renderError, renderStep, scrollToEnd, setWaiting, showContext, showStopped, startTimer, stopTimer, streamToken } from "./turns.js";
 
 export async function stopAnswer() {
   const controller = state.controller;
@@ -42,7 +43,7 @@ export function handleEvent(view, event) {
   // picking up a paused answer sends the paused step again
   if (event.type === "step" && turn.steps.some((s) => s.id === event.id)) return;
   if (event.type === "step") {
-    const step = { id: event.id, label: event.label, done: false, tool: "", result: "", mails: [], events: [], files: [] };
+    const step = { id: event.id, label: event.label, done: false, tool: event.tool || "", result: "", mails: [], events: [], files: [] };
     turn.steps.push(step);
     renderStep(view, step);
     // text before a step was the agent thinking aloud
@@ -59,6 +60,10 @@ export function handleEvent(view, event) {
     }
   }
   if (event.type === "token") streamToken(view, event.text);
+  if (event.type === "usage") {
+    turn.context = { tokens: event.tokens, limit: event.limit };
+    showContext(view);
+  }
   if (event.type === "answer") {
     turn.answer = event.text;
     renderAnswer(view, event.text);
@@ -72,6 +77,7 @@ export function handleEvent(view, event) {
     turn.approval = { ...turn.approval, state: event.type === "expired" ? "expired" : event.state };
     renderApproval(view, turn.approval);
     setWaiting(view, event.type === "expired" ? "" : "Working on it");
+    if (event.type === "decided") startTimer(view);
   }
   if (event.type === "error") {
     turn.error = event.message;
@@ -79,6 +85,8 @@ export function handleEvent(view, event) {
     loadStatus();
   }
   if (event.type === "done") {
+    turn.seconds = event.seconds;
+    stopTimer(view);
     if (event.stopped) {
       turn.stopped = true;
       turn.answer = turn.answer || view.draft.trim();
@@ -87,6 +95,8 @@ export function handleEvent(view, event) {
     state.title = state.title || event.chat.title;
     showTitle();
     loadChats();
+    // the agent may have saved or forgotten something
+    loadMemory();
   }
   scrollToEnd();
 }
@@ -147,6 +157,8 @@ async function follow(view, url, body, retryText) {
       renderError(view, error.message, retryText);
     }
   } finally {
+    // however it ended (done, error, stop), the clock stops
+    if (view.timer) stopTimer(view);
     view.article.classList.add("settled");
     setBusy(false);
     showNotice();

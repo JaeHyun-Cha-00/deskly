@@ -1,6 +1,7 @@
 import { loadChats, newChat, showChat, startRename } from "./chats.js";
 import { APP_NAMES, openConnectors, toggleApp } from "./connectors.js";
 import { $, IS_MAC, MOD, WIDE, app, input, isTyping, palette } from "./dom.js";
+import { loadMemory } from "./memory.js";
 import { openPalette } from "./palette.js";
 import { closeDrawers, panelIsOpen, setPanel, showPanel, updateScrim } from "./panel.js";
 import { openSettings } from "./settings.js";
@@ -60,5 +61,6 @@ $("today").textContent = new Date().toLocaleDateString("en-US", { weekday: "long
 setPanel(false);
 showChat(state.chatId, "", []);
 loadStatus();
+loadMemory();
 loadChats().catch(() => {});
 input.focus();

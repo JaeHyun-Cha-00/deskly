@@ -3,6 +3,8 @@
   grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--panel-w);
   height: 100vh;
   height: 100dvh;
+  /* the closed Sources column must not make the page scroll sideways */
+  overflow: clip;
   transition: grid-template-columns 220ms ease;
 }
 
@@ -139,10 +141,8 @@
 
 .chat-delete svg { width: 0.95rem; height: 0.95rem; }
 .chat-item:hover .chat-delete,
-.chat-delete:focus-visible,
-.chat-delete[data-confirm] { opacity: 1; }
+.chat-delete:focus-visible { opacity: 1; }
 .chat-delete:hover { color: var(--danger); background: var(--paper); }
-.chat-delete[data-confirm] { background: var(--danger); color: var(--sheet); font-weight: 500; }
 
 .chat-list-empty {
   margin: 1rem 0.6rem;
@@ -209,15 +209,6 @@
 .chat-title:not(:disabled):hover { border-color: var(--rule); }
 .chat-title:disabled { color: var(--ink-soft); }
 .title-field { flex: 1; border-color: var(--pen); background: var(--paper); outline: none; }
-
-.demo-badge {
-  padding: 0.1rem 0.5rem;
-  border: 1px dashed var(--pen);
-  border-radius: 999px;
-  color: var(--pen);
-  font-size: var(--step--2);
-  white-space: nowrap;
-}
 
 #toggle-panel { margin-left: auto; }
 

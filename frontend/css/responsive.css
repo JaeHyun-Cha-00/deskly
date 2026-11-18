@@ -40,8 +40,8 @@
   .callout { flex-direction: column; align-items: flex-start; }
   .setting, .setting:has(.setting-text) { grid-template-columns: minmax(0, 1fr); }
   .setting-name { padding-top: 0; }
-  .connector { grid-template-columns: 2.4rem minmax(0, 1fr); }
-  .connector-action { grid-column: 2; justify-items: start; }
+  .connector { grid-template-columns: 2.25rem minmax(0, 1fr); }
+  .connector-button { grid-column: 2; justify-self: start; width: 7rem; }
   .today { margin-top: 3vh; }
   .empty h1 { font-size: var(--step-2); }
   .chat-delete { opacity: 1; }
@@ -53,5 +53,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .msg-assistant:not(.settled) .step:not([data-done])::before { border-color: var(--pen); }
+  .step:not([data-done])::before,
+  .steps-chip[data-working] .steps-chip-text::before { border-color: var(--pen); }
 }

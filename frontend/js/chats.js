@@ -5,8 +5,12 @@ import { closeDrawers, showPanel } from "./panel.js";
 import { state } from "./state.js";
 import { renderSavedTurn, scrollToEnd } from "./turns.js";
 
+// chats deleted a moment ago, still undoable: id -> the timer that deletes them for good
+const DELETING = new Map();
+const UNDO_SECONDS = 5;
+
 export async function loadChats() {
-  state.chats = await getJson("/api/chats");
+  state.chats = (await getJson("/api/chats")).filter((chat) => !DELETING.has(chat.id));
   renderChatList();
 }
 
@@ -32,17 +36,10 @@ export function renderChatList() {
     link.title = title;
     if (chat.id === state.chatId) link.setAttribute("aria-current", "page");
 
-    const remove = button("chat-delete", undefined, () => {
-      if ("confirm" in remove.dataset) return deleteChat(chat.id);
-      remove.dataset.confirm = "";
-      remove.textContent = "Delete";
-    });
-    remove.innerHTML = ICONS.close;
+    const remove = button("chat-delete", undefined, () => deleteChat(chat.id));
+    remove.innerHTML = ICONS.trash;
+    remove.title = "Delete";
     remove.setAttribute("aria-label", `Delete “${title}”`);
-    remove.addEventListener("blur", () => {
-      delete remove.dataset.confirm;
-      remove.innerHTML = ICONS.close;
-    });
 
     item.append(link, remove);
     items.append(item);
@@ -80,12 +77,27 @@ export function showChat(id, title, turns) {
   scrollToEnd(true);
 }
 
-export async function deleteChat(id) {
+// One click deletes: the chat disappears at once, and Undo in the message brings it back.
+// It is deleted for good only after a few seconds (closing the app before then keeps it).
+export function deleteChat(id) {
   if (state.busy && id === state.chatId) return;
-  await api(`/api/chats/${id}`, { method: "DELETE" });
-  if (id === state.chatId) showChat(crypto.randomUUID(), "", []);
-  await loadChats();
-  toast("Chat deleted");
+  const wasOpen = id === state.chatId;
+  DELETING.set(id, setTimeout(async () => {
+    DELETING.delete(id);
+    await api(`/api/chats/${id}`, { method: "DELETE" }).catch(() => toast("Couldn't delete the chat"));
+  }, UNDO_SECONDS * 1000));
+  state.chats = state.chats.filter((chat) => chat.id !== id);
+  if (wasOpen) showChat(crypto.randomUUID(), "", []);
+  else renderChatList();
+  toast("Chat deleted", {
+    label: "Undo",
+    onClick: async () => {
+      clearTimeout(DELETING.get(id));
+      DELETING.delete(id);
+      await loadChats();
+      if (wasOpen && !state.busy) openChat(id);
+    },
+  });
 }
 
 export function showTitle() {

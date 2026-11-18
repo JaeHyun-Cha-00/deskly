@@ -2,7 +2,8 @@ import { decide, send } from "./ask.js";
 import { longDate, shortDate } from "./dates.js";
 import { $, ICONS, button, copyText, el, input, messagesEl, thread, toast } from "./dom.js";
 import { renderMarkdown } from "./markdown.js";
-import { OPENED, markOpenMail, openMail, showPanel, uniqueMails } from "./panel.js";
+import { OPENED, markOpenMail, openMail, panelIsOpen, renderPanel, showPanel, stepApps, uniqueMails } from "./panel.js";
+import { state } from "./state.js";
 
 export function nearBottom() {
   return thread.scrollHeight - thread.scrollTop - thread.clientHeight < 160;
@@ -28,10 +29,12 @@ export function addUserMessage(text, at, live) {
 }
 
 export function createTurnView(turn, live) {
-  const article = el("article", `msg msg-assistant no-steps${live ? " arriving" : ""}`);
-  const slip = el("ol", "slip");
-  slip.setAttribute("aria-label", "What I looked at");
-  slip.append(el("li", "slip-title", "What I looked at"));
+  const article = el("article", `msg msg-assistant${live ? " arriving" : ""}`);
+
+  // one chip per answer: what it used and how long it took; it opens the steps on the right
+  const chip = button("steps-chip", undefined, () => showPanel({ view: "turn", turn }, true));
+  chip.title = "Show what I looked at";
+  chip.hidden = true;
 
   const body = el("div", "turn-body");
   const letter = el("div", "letter waiting", "Thinking");
@@ -40,48 +43,64 @@ export function createTurnView(turn, live) {
   cards.hidden = true;
   actions.hidden = true;
 
-  body.append(letter, cards, actions);
-  article.append(slip, body);
+  body.append(chip, letter, cards, actions);
+  article.append(body);
   messagesEl.append(article);
-  return { turn, article, slip, letter, cards, actions, steps: new Map(), draft: "", shown: 0, frame: 0 };
+  const view = { turn, article, chip, letter, cards, actions, draft: "", shown: 0, frame: 0, started: Date.now() };
+  if (live) {
+    // the time ticks while the answer is being written
+    view.timer = setInterval(() => showChip(view), 1000);
+  }
+  return view;
 }
 
-export function renderStep(view, step) {
-  view.article.classList.remove("no-steps");
-  const item = el("li", "step");
-  item.append(el("span", "step-label", step.label));
-  view.slip.append(item);
-  view.steps.set(step.id, item);
-  if (step.done) finishStep(view, step);
+const seconds = (s) => (s < 60 ? `${Math.max(1, Math.round(s))}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`);
+
+export function showChip(view) {
+  const { turn, chip } = view;
+  const working = Boolean(view.timer);
+  const steps = turn.steps;
+  if (!steps.length && !working) {
+    chip.hidden = true;
+    return;
+  }
+  chip.hidden = false;
+  if (working) chip.dataset.working = "";
+  else delete chip.dataset.working;
+  const parts = [];
+  if (working) {
+    const current = [...steps].reverse().find((s) => !s.done);
+    parts.push(current ? current.label : "Working", seconds((Date.now() - view.started) / 1000));
+  } else {
+    if (steps.length) parts.push(stepApps(steps).join(", "), `${steps.length} step${steps.length === 1 ? "" : "s"}`);
+    if (turn.seconds) parts.push(`took ${seconds(turn.seconds)}`);
+  }
+  chip.replaceChildren(el("span", "steps-chip-text", parts.join(" · ")));
+  chip.disabled = !steps.length;
+  // the open panel follows this answer's steps as they come in
+  if (panelIsOpen() && state.panel.view === "turn" && state.panel.turn === turn) renderPanel();
 }
 
-export function finishStep(view, step) {
-  const item = view.steps.get(step.id);
-  if (!item) return;
-  item.dataset.done = "";
-  if (!step.result) return;
+export function startTimer(view) {
+  // after an approval the answer goes on; the time already spent counts too
+  view.started = Date.now() - (view.turn.seconds || 0) * 1000;
+  clearInterval(view.timer);
+  view.timer = setInterval(() => showChip(view), 1000);
+  showChip(view);
+}
 
-  if (step.files?.length) {
-    const result = button("step-result", step.result, () => showPanel({ view: "files", step }, true));
-    result.title = "Show these files";
-    item.append(result);
-    return;
-  }
-  if (step.events?.length) {
-    const result = button("step-result", step.result, () => showPanel({ view: "events", step }, true));
-    result.title = "Show these events";
-    item.append(result);
-    return;
-  }
-  if (!step.mails.length) {
-    item.append(el("span", "step-result", step.result));
-    return;
-  }
-  // one opened mail opens itself; a conversation or a search shows its list
-  const opened = OPENED.has(step.tool) && step.mails.length === 1;
-  const result = button("step-result", step.result, () => opened ? openMail(step.mails[0].id) : showPanel({ view: "search", step }, true));
-  result.title = opened ? "Show this mail" : "Show what this search found";
-  item.append(result);
+export function stopTimer(view) {
+  clearInterval(view.timer);
+  view.timer = 0;
+  showChip(view);
+}
+
+export function renderStep(view) {
+  showChip(view);
+}
+
+export function finishStep(view) {
+  showChip(view);
 }
 
 export function setWaiting(view, text) {
@@ -133,8 +152,23 @@ export function renderAnswer(view, text, now) {
     toast("Copied");
   });
   copy.innerHTML = `${ICONS.copy}<span>Copy</span>`;
-  view.actions.replaceChildren(copy);
+  view.meter = el("span", "context-meter");
+  view.actions.replaceChildren(copy, view.meter);
   view.actions.hidden = false;
+  showContext(view);
+}
+
+const thousands = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
+
+// how full the model's memory for this chat is: past questions, answers and what tools brought back
+export function showContext(view) {
+  const context = view.turn.context;
+  if (!view.meter || !context) return;
+  const share = context.tokens / context.limit;
+  view.meter.dataset.level = share >= 0.85 ? "full" : share >= 0.6 ? "high" : "ok";
+  view.meter.textContent = `Context ${thousands(context.tokens)} of ${thousands(context.limit)}`
+    + (share >= 0.85 ? ". Start a new chat soon" : "");
+  view.meter.title = `This chat uses ${Math.round(share * 100)}% of what the model can hold at once. Past the limit, it starts forgetting or fails.`;
 }
 
 export function showStopped(view, text) {
@@ -274,7 +308,7 @@ export function renderSavedTurn(turn) {
   addUserMessage(turn.user, turn.at);
   const view = createTurnView(turn);
   view.article.classList.add("settled");
-  turn.steps.forEach((step) => renderStep(view, step));
+  showChip(view);
   if (turn.approval) renderApproval(view, turn.approval);
   if (turn.stopped) showStopped(view, turn.answer);
   else if (turn.answer) renderAnswer(view, turn.answer);

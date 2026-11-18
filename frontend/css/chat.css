@@ -32,14 +32,6 @@
 
 .callout p { flex: 1; margin: 0; }
 
-.demo-note {
-  margin: 0 0 1.75rem;
-  padding-left: 0.9rem;
-  border-left: 3px solid var(--pen-wash);
-  color: var(--ink-soft);
-  font-size: var(--step--1);
-}
-
 .msg { margin: 0 0 2.25rem; }
 .msg.arriving { animation: arrive 200ms ease-out; }
 
@@ -60,61 +52,70 @@
   overflow-wrap: anywhere;
 }
 
-.msg-assistant {
-  display: grid;
-  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
-  column-gap: 1.75rem;
-  align-items: start;
+.msg-assistant { display: block; }
+
+/* the chip above each answer: what it used and how long it took; opens the steps on the right */
+.steps-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0.2rem 0.7rem 0.2rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-left: 5px double var(--pen);
+  border-radius: 0 999px 999px 0;
+  background: var(--sheet);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+  text-align: left;
+}
+.steps-chip::after {
+  content: "";
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.steps-chip:not(:disabled):hover { border-color: var(--pen); color: var(--ink); }
+.steps-chip:disabled::after { display: none; }
+.steps-chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.steps-chip[data-working] .steps-chip-text::before {
+  content: "";
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.45rem;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 50%;
+  vertical-align: 0.05rem;
+  animation: pulse 1.1s ease-in-out infinite;
 }
 
-.msg-assistant.no-steps { grid-template-columns: minmax(0, 1fr); }
-.msg-assistant.no-steps .slip { display: none; }
-
-@container (max-width: 40rem) {
-  .msg-assistant { grid-template-columns: minmax(0, 1fr); row-gap: 0.9rem; }
-}
-
-.slip {
-  position: sticky;
-  top: 0;
+/* the steps in the right panel */
+.step-list {
   margin: 0;
-  padding: 0.35rem 0.75rem 0.5rem 1rem;
+  padding: 0;
   list-style: none;
   font-size: var(--step--1);
-  line-height: 1.5rem;
-  color: var(--ink-soft);
-  border-left: 5px double var(--pen);
-  background-color: var(--sheet);
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0 calc(1.5rem - 1px),
-    var(--rule) calc(1.5rem - 1px) 1.5rem
-  );
-  background-position: 0 0.35rem;
+  line-height: 1.5;
 }
-
-.slip-title {
-  color: var(--ink);
-  font-weight: 500;
-}
-
-.step { position: relative; padding-left: 1.1rem; }
-
+.step { position: relative; padding: 0.2rem 0 0.2rem 1.1rem; color: var(--ink-soft); }
 .step::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 0.5rem;
+  top: 0.6rem;
   width: 0.5rem;
   height: 0.5rem;
   border: 1.5px solid var(--ink-soft);
   border-radius: 50%;
 }
-
 .step[data-done] { color: var(--ink); }
 .step[data-done]::before { background: var(--pen); border-color: var(--pen); }
-.msg-assistant:not(.settled) .step:not([data-done])::before { animation: pulse 1.1s ease-in-out infinite; }
-
+.step:not([data-done])::before { animation: pulse 1.1s ease-in-out infinite; }
 .step-label { display: block; }
 
 .step-result {
@@ -129,13 +130,11 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
-
 button.step-result {
   text-decoration: underline;
   text-decoration-color: var(--rule);
   text-underline-offset: 3px;
 }
-
 button.step-result:hover { color: var(--pen); text-decoration-color: var(--pen); }
 
 @keyframes pulse {
@@ -309,6 +308,10 @@ button.step-result:hover { color: var(--pen); text-decoration-color: var(--pen);
 }
 
 .letter-actions { margin-top: 0.6rem; }
+.letter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; }
+.context-meter { color: var(--ink-soft); font-size: var(--step--2); font-variant-numeric: tabular-nums; }
+.context-meter[data-level="high"] { color: var(--pen); }
+.context-meter[data-level="full"] { color: var(--danger); font-weight: 500; }
 
 .stopped-note {
   margin: 0.5rem 0 0;
