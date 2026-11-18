@@ -10,9 +10,10 @@ from connectors.mcp.auth import TOKENS_DIR, client_file
 if __name__ == "__main__":
     name = sys.argv[1] if len(sys.argv) > 1 else "github"
     client_id = input(f"{name} OAuth App Client ID: ").strip()
-    client_secret = getpass(f"{name} OAuth App Client secret (hidden as you type): ").strip()
-    if not client_id or not client_secret:
-        sys.exit("Both the Client ID and the secret are needed.")
+    # leave the secret empty for an app that uses PKCE instead (Slack)
+    client_secret = getpass(f"{name} OAuth App Client secret (hidden; Enter for none): ").strip()
+    if not client_id:
+        sys.exit("The Client ID is needed.")
     TOKENS_DIR.mkdir(parents=True, exist_ok=True)
     os.chmod(TOKENS_DIR, 0o700)
     client_file(name).write_text(json.dumps({"client_id": client_id, "client_secret": client_secret}))

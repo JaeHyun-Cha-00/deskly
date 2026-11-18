@@ -8,16 +8,21 @@ from mcp.client.auth import OAuthClientProvider
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 
 from config import APP_DIR
+from connectors.mcp.servers import SERVERS
 
 TOKENS_DIR = APP_DIR / "mcp"
 # the browser comes back here after the user signs in to a server
 CALLBACK_PORT = 33418
-REDIRECT = f"http://127.0.0.1:{CALLBACK_PORT}/callback"
 SIGN_IN_SECONDS = 180
 
 class SignInNeeded(Exception):
     # the saved sign-in stopped working while answering; the user must connect again
     pass
+
+def redirect(name):
+    # most servers take 127.0.0.1; Slack only treats "localhost" as a desktop app's address
+    host = SERVERS[name].get("callback_host", "127.0.0.1")
+    return f"http://{host}:{CALLBACK_PORT}/callback"
 
 def token_file(name):
     return TOKENS_DIR / f"{name}.json"
@@ -31,13 +36,15 @@ def registered_client(name):
     if not client_file(name).exists():
         return None
     saved = json.loads(client_file(name).read_text())
+    # an app with no secret (Slack with PKCE on) proves itself with PKCE alone
+    secret = saved.get("client_secret") or None
     return OAuthClientInformationFull(
         client_id=saved["client_id"],
-        client_secret=saved["client_secret"],
-        redirect_uris=[REDIRECT],
+        client_secret=secret,
+        redirect_uris=[redirect(name)],
         grant_types=["authorization_code", "refresh_token"],
         response_types=["code"],
-        token_endpoint_auth_method="client_secret_post",
+        token_endpoint_auth_method="client_secret_post" if secret else "none",
     )
 
 class FileTokenStorage:
@@ -80,8 +87,8 @@ async def no_browser(url):
     # while answering, never open a sign-in page by surprise
     raise SignInNeeded("The sign-in for this app expired. Open Connectors and connect it again.")
 
-async def wait_for_callback():
-    # a tiny one-time web server on 127.0.0.1 that catches the browser coming back
+async def wait_for_callback(host="127.0.0.1"):
+    # a tiny one-time web server on this laptop that catches the browser coming back
     found = asyncio.get_running_loop().create_future()
 
     async def answer(reader, writer):
@@ -96,7 +103,9 @@ async def wait_for_callback():
         elif "error" in query and not found.done():
             found.set_exception(PermissionError(f"Sign-in was cancelled ({query['error'][0]})."))
 
-    server = await asyncio.start_server(answer, "127.0.0.1", CALLBACK_PORT)
+    # "localhost" may be 127.0.0.1 or ::1 in the browser, so listen on both
+    hosts = ["127.0.0.1", "::1"] if host == "localhost" else [host]
+    server = await asyncio.start_server(answer, hosts, CALLBACK_PORT)
     try:
         return await asyncio.wait_for(found, SIGN_IN_SECONDS)
     finally:
@@ -122,7 +131,7 @@ def provider(name, url, interactive, scope=None):
         server_url=url,
         client_metadata=OAuthClientMetadata(
             client_name="Deskly",
-            redirect_uris=[REDIRECT],
+            redirect_uris=[redirect(name)],
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],
             token_endpoint_auth_method="none",
@@ -131,7 +140,7 @@ def provider(name, url, interactive, scope=None):
         ),
         storage=FileTokenStorage(name),
         redirect_handler=open_browser if interactive else no_browser,
-        callback_handler=wait_for_callback,
+        callback_handler=lambda: wait_for_callback(SERVERS[name].get("callback_host", "127.0.0.1")),
         timeout=SIGN_IN_SECONDS,
     )
 
