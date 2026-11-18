@@ -1,6 +1,6 @@
 import json
 
-from config import SETTINGS_FILE
+from config import SETTINGS_FILE, write_private
 
 CHOICES = {
     "theme": ["system", "light", "dark"],
@@ -22,5 +22,5 @@ def update(changes):
         if value not in CHOICES.get(key, []):
             raise ValueError(f"{key} can't be {value!r}")
         settings[key] = value
-    SETTINGS_FILE.write_text(json.dumps(settings, indent=1))
+    write_private(SETTINGS_FILE, json.dumps(settings, indent=1))
     return settings

@@ -14,7 +14,7 @@ export async function loadChats() {
   renderChatList();
 }
 
-export function renderChatList() {
+function renderChatList() {
   const list = $("chat-list");
   list.replaceChildren();
   if (!state.chats.length) {
@@ -79,7 +79,7 @@ export function showChat(id, title, turns) {
 
 // One click deletes: the chat disappears at once, and Undo in the message brings it back.
 // It is deleted for good only after a few seconds (closing the app before then keeps it).
-export function deleteChat(id) {
+function deleteChat(id) {
   if (state.busy && id === state.chatId) return;
   const wasOpen = id === state.chatId;
   DELETING.set(id, setTimeout(async () => {

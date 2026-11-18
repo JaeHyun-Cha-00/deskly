@@ -36,7 +36,12 @@ def step_label(call):
 
 def step_result(tool, content, artifact=None):
     # the short result and the cards for the screen: mails, events and files
-    found = APPS[OWNER[tool]].result(tool, content, artifact) if tool in OWNER else None
+    if tool in OWNER:
+        found = APPS[OWNER[tool]].result(tool, content, artifact)
+    elif mcp_servers.server_of(tool):
+        found = mcp_servers.result(tool, content, artifact)
+    else:
+        found = None
     return found or first_line(content)
 
 def approval_text(call):

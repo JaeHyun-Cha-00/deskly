@@ -148,6 +148,13 @@
       <p class="connectors-empty" id="connectors-empty" hidden></p>
       <!-- one group and row per app, built from the server's list (connectors.js) -->
       <div id="connector-groups"></div>
+      <!-- the Tools view: one app's tools, each on or off -->
+      <div class="tool-picker" id="tool-picker"></div>
+      <footer class="tools-foot" id="tools-foot">
+        <span class="tools-total" id="tools-total"></span>
+        <button type="button" class="plain-button" id="tools-reset">Recommended</button>
+        <button type="button" class="primary-button" id="tools-save">Save</button>
+      </footer>
       <footer class="connectors-foot">
         <button type="button" class="plain-button" id="connectors-add">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>

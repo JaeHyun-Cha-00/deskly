@@ -1,10 +1,12 @@
-import { getJson } from "./api.js";
+import { getJson, sendJson } from "./api.js";
 import { $, button, el, toast } from "./dom.js";
 import { closeDrawers } from "./panel.js";
 import { state } from "./state.js";
 
 // app id -> the name shown, filled from the server's list
-export const APP_NAMES = {};
+const APP_NAMES = {};
+// app id -> whether its tools can be chosen (MCP servers)
+const HAS_TOOLS = {};
 
 const WORDS = {
   checking: { state: "Checking", action: "" },
@@ -22,6 +24,7 @@ const MARKS = {
   files: '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
   github: '<path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/>',
   slack: '<path d="M9.5 4l-2 16M16.5 4l-2 16M4.5 9h16M3.5 15h16"/>',
+  notion: '<path d="M6.5 3.5h8l4 4v13h-12z"/><path d="M14.5 3.5v4h4M9.5 11.5h6M9.5 15h6"/>',
 };
 
 function drawMark(mark, name) {
@@ -89,6 +92,7 @@ export function addRows(rows) {
   for (const row of rows) {
     if ($(`connector-${row.id}`)) continue;
     APP_NAMES[row.id] = row.name;
+    HAS_TOOLS[row.id] = row.tools;
     state.apps[row.id] = state.apps[row.id] || "checking";
     groupList(groups, row.group).append(appRow(row));
   }
@@ -120,6 +124,11 @@ function appRow(app) {
   title.append(el("span", "connector-name", app.name), status);
   const text = el("div", "connector-text");
   text.append(title, el("span", "connector-about", app.about));
+  if (app.tools) {
+    // only shown once the app is connected (CSS)
+    const tools = button("connector-tools", "Choose tools", () => openTools(app.id));
+    text.append(tools);
+  }
   const toggle = button("connector-button", "", () => toggleApp(app.id));
   toggle.id = `${app.id}-action`;
   row.append(mark, text, toggle);
@@ -138,17 +147,22 @@ const VIEWS = {
     intro: "Each app asks only for what it needs, and you can disconnect it any time.",
     empty: "Every app is already connected.",
   },
+  tools: {
+    title: "Tools",
+    intro: "Turn on only what you need. Every tool that is on is sent to the model with each question, so fewer tools make answers faster, cheaper and more accurate. Tools that change something always ask you first.",
+    empty: "",
+  },
 };
 
-export function showView(view) {
+function showView(view) {
   const dialog = $("connectors");
   dialog.dataset.view = view;
   const words = VIEWS[view];
-  $("connectors-title").textContent = words.title;
+  $("connectors-title").textContent = view === "tools" ? `${APP_NAMES[picking.app]} tools` : words.title;
   $("connectors-intro").textContent = words.intro;
   const shown = Object.values(state.apps).filter((value) => (view === "mine") === isOn(value));
   $("connectors-empty").textContent = words.empty;
-  $("connectors-empty").hidden = shown.length > 0 || Object.values(state.apps).includes("checking");
+  $("connectors-empty").hidden = view === "tools" || shown.length > 0 || Object.values(state.apps).includes("checking");
   $("connectors-add").hidden = view === "add" || !Object.values(state.apps).some((value) => !isOn(value));
 }
 
@@ -162,7 +176,7 @@ export function openConnectors() {
 $("connectors-add").addEventListener("click", () => showView("add"));
 $("connectors-back").addEventListener("click", () => showView("mine"));
 
-export async function toggleApp(name) {
+async function toggleApp(name) {
   const label = APP_NAMES[name];
   if (state.apps[name] === "connected") {
     showApps((await getJson(`/api/connectors/${name}/disconnect`, { method: "POST" })).apps);
@@ -173,10 +187,89 @@ export async function toggleApp(name) {
   try {
     showApps((await getJson(`/api/connectors/${name}/connect`, { method: "POST" })).apps);
     toast(`${label} connected`);
-    // back to the connected apps, where the new one now shows
-    if ($("connectors").open) showView("mine");
+    // an MCP app goes straight to choosing its tools; others back to the connected apps
+    if ($("connectors").open) {
+      if (HAS_TOOLS[name]) openTools(name);
+      else showView("mine");
+    }
   } catch (error) {
     showApps({ [name]: "not_connected" });
     toast(`Couldn't connect ${label}: ${error.message}`);
   }
 }
+
+// The Tools view: every tool one MCP app offers, on or off, with what each costs per question.
+const picking = { app: "", tools: [] };
+
+const thousands = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+
+async function openTools(app) {
+  picking.app = app;
+  picking.tools = [];
+  showView("tools");
+  const picker = $("tool-picker");
+  picker.replaceChildren(el("p", "connectors-empty", "Getting the tools…"));
+  $("tools-total").textContent = "";
+  try {
+    picking.tools = (await getJson(`/api/connectors/${app}/tools`)).tools;
+  } catch (error) {
+    picker.replaceChildren(el("p", "connectors-empty", `Couldn't get the tools: ${error.message}`));
+    return;
+  }
+  if (picking.app !== app) return;
+  showTools();
+}
+
+function showTools() {
+  const picker = $("tool-picker");
+  picker.replaceChildren();
+  const groups = [["Reads", false], ["Changes something (asks you first)", true]];
+  for (const [heading, write] of groups) {
+    const tools = picking.tools.filter((tool) => tool.write === write);
+    if (!tools.length) continue;
+    const section = el("section", "tool-group");
+    section.append(el("h3", null, `${heading} · ${tools.length}`));
+    for (const tool of tools) {
+      const row = el("label", "tool-row");
+      const box = el("input");
+      box.type = "checkbox";
+      box.checked = tool.on;
+      box.addEventListener("change", () => {
+        tool.on = box.checked;
+        showTotal();
+      });
+      const text = el("span", "tool-text");
+      text.append(el("span", "tool-name", tool.title), el("span", "tool-about", tool.about));
+      row.append(box, text, el("span", "tool-cost", thousands(tool.tokens)));
+      section.append(row);
+    }
+    picker.append(section);
+  }
+  showTotal();
+}
+
+function showTotal() {
+  const on = picking.tools.filter((tool) => tool.on);
+  const tokens = on.reduce((sum, tool) => sum + tool.tokens, 0);
+  const total = $("tools-total");
+  total.textContent = `${on.length} of ${picking.tools.length} on · about ${thousands(tokens)} tokens with every question`;
+  // past this, the tools alone take a big part of what the model can hold
+  total.dataset.level = tokens > 30000 ? "full" : tokens > 15000 ? "high" : "ok";
+}
+
+$("tools-reset").addEventListener("click", () => {
+  picking.tools.forEach((tool) => { tool.on = tool.recommended; });
+  showTools();
+});
+
+$("tools-save").addEventListener("click", async () => {
+  const names = picking.tools.filter((tool) => tool.on).map((tool) => tool.name);
+  try {
+    await sendJson(`/api/connectors/${picking.app}/tools`, "PUT", { tools: names });
+  } catch (error) {
+    toast(`Couldn't save: ${error.message}`);
+    return;
+  }
+  toast(`${APP_NAMES[picking.app]}: ${names.length} tools on`);
+  showView("mine");
+});

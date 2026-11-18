@@ -1,10 +1,10 @@
 // Everything is escaped first, so nothing in a reply can become HTML.
 
-export function escapeHtml(text) {
+function escapeHtml(text) {
   return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
-export function inline(text) {
+function inline(text) {
   return text
     .split(/(`[^`]+`)/)
     .map((part) => part.startsWith("`") && part.endsWith("`") && part.length > 2
@@ -16,19 +16,19 @@ export function inline(text) {
     .join("");
 }
 
-export const LIST_ITEM = /^(\s*)([-*•]|(\d+)[.)])\s+(.*)$/;
-export const FENCE = /^\s*```/;
-export const RULE = /^\s*(-{3,}|\*{3,}|_{3,})\s*$/;
-export const HEADING = /^#{1,6}\s+(.*)$/;
-export const TABLE_ROW = /^\s*\|.*\|\s*$/;
-export const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+const LIST_ITEM = /^(\s*)([-*•]|(\d+)[.)])\s+(.*)$/;
+const FENCE = /^\s*```/;
+const RULE = /^\s*(-{3,}|\*{3,}|_{3,})\s*$/;
+const HEADING = /^#{1,6}\s+(.*)$/;
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
-export function startsBlock(line, next = "") {
+function startsBlock(line, next = "") {
   return FENCE.test(line) || RULE.test(line) || HEADING.test(line) || LIST_ITEM.test(line)
     || line.startsWith("&gt;") || (TABLE_ROW.test(line) && TABLE_DIVIDER.test(next));
 }
 
-export function renderList(lines) {
+function renderList(lines) {
   let html = "";
   const open = [];
   for (const line of lines) {
@@ -57,7 +57,7 @@ export function renderList(lines) {
   return html;
 }
 
-export function renderTable(lines) {
+function renderTable(lines) {
   const cells = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => inline(cell.trim()));
   const [head, , ...rows] = lines;
   const th = cells(head).map((c) => `<th>${c}</th>`).join("");

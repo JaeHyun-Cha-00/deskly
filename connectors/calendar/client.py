@@ -1,17 +1,14 @@
-from functools import cache
 
-from googleapiclient.discovery import build
-
-from connectors.google_auth import forget_credentials, get_credentials, is_signed_in
+from connectors.google_auth import forget_credentials, get_credentials, is_signed_in, service
 
 # how it shows in Connectors
 NAME = "Google Calendar"
 ABOUT = "See your events. Adding an event asks you first."
 GROUP = "Google"
 
-@cache
 def get_service():
-    return build("calendar", "v3", credentials=get_credentials("calendar"))
+    # this thread's own connection to Google (see google_auth.service)
+    return service("calendar", "calendar", "v3")
 
 def connect():
     # opens Google's sign-in the first time; later it reuses the saved sign-in
@@ -22,4 +19,3 @@ def is_connected():
 
 def sign_out():
     forget_credentials("calendar")
-    get_service.cache_clear()

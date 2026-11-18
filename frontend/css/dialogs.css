@@ -244,6 +244,14 @@ select {
 
 .connectors { width: min(36rem, calc(100vw - 32px)); }
 
+/* one fixed size for every view (connected, add, tools); the content scrolls inside it */
+.connectors .settings-box {
+  display: flex;
+  flex-direction: column;
+  height: min(44rem, calc(100dvh - 32px));
+}
+.connectors .settings-head { flex: none; }
+
 .connectors-intro {
   margin: 0;
   padding: 1rem 1.5rem 0.25rem;
@@ -368,7 +376,8 @@ select {
 
 /* Connectors: "mine" shows connected apps, "add" shows the rest */
 .connectors-back { display: none; margin-left: -0.4rem; }
-.connectors[data-view="add"] .connectors-back { display: grid; }
+.connectors[data-view="add"] .connectors-back,
+.connectors[data-view="tools"] .connectors-back { display: grid; }
 .connectors .settings-head h2 { flex: 1; }
 .connectors[data-view="mine"] .connector:not([data-state="connected"]),
 .connectors[data-view="add"] .connector[data-state="connected"] { display: none; }
@@ -385,7 +394,15 @@ select {
   font-size: var(--step--1);
 }
 
-.connectors-foot { padding: 0.25rem 1.5rem 1.25rem; }
+/* "Add a connector" stays at the bottom of the window while the list scrolls */
+.connectors-foot {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: 0.8rem 1.5rem 1rem;
+  border-top: 1px solid var(--rule-soft);
+  background: var(--sheet);
+}
 .connectors-foot .plain-button { display: inline-flex; align-items: center; gap: 0.45rem; }
 .connectors-foot svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 
@@ -415,3 +432,65 @@ select {
   text-underline-offset: 3px;
   pointer-events: auto;
 }
+
+/* Tools view: one MCP app's tools, each on or off */
+.tool-picker,
+.tools-foot { display: none; }
+.connectors[data-view="tools"] #connector-groups,
+.connectors[data-view="tools"] .connectors-foot { display: none; }
+.connectors[data-view="tools"] .tool-picker { display: block; padding: 0.5rem 1.5rem 0; }
+.connectors[data-view="tools"] .tools-foot {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.5rem 1rem;
+  border-top: 1px solid var(--rule-soft);
+  background: var(--sheet);
+}
+.tool-picker .connectors-empty { margin: 0.5rem 0; }
+
+.tool-group { padding-top: 0.6rem; }
+.tool-group h3 {
+  margin: 0 0 0.2rem;
+  font-size: var(--step--2);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.tool-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+  cursor: pointer;
+}
+.tool-row input { width: 1rem; height: 1rem; margin-top: 0.2rem; accent-color: var(--pen); }
+.tool-text { display: grid; gap: 0.05rem; min-width: 0; }
+.tool-name { font-weight: 500; }
+.tool-about { font-size: var(--step--1); color: var(--ink-soft); }
+.tool-cost { color: var(--ink-soft); font-size: var(--step--2); font-variant-numeric: tabular-nums; padding-top: 0.2rem; }
+
+.tools-total { flex: 1; min-width: 12rem; font-size: var(--step--1); color: var(--ink-soft); }
+.tools-total[data-level="high"] { color: var(--pen); }
+.tools-total[data-level="full"] { color: var(--danger); font-weight: 500; }
+
+/* "Choose tools" under a connected MCP app */
+.connector-tools {
+  justify-self: start;
+  margin-top: 0.15rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pen);
+  font-size: var(--step--1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.connector:not([data-state="connected"]) .connector-tools { display: none; }

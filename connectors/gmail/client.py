@@ -1,10 +1,7 @@
 import base64
 import re
-from functools import cache
 
-from googleapiclient.discovery import build
-
-from connectors.google_auth import forget_credentials, get_credentials, is_signed_in
+from connectors.google_auth import forget_credentials, get_credentials, is_signed_in, service
 
 # how it shows in Connectors
 NAME = "Gmail"
@@ -13,9 +10,9 @@ GROUP = "Google"
 
 MAX_BODY_CHARS = 4000
 
-@cache
 def get_service():
-    return build("gmail", "v1", credentials=get_credentials("gmail"))
+    # this thread's own connection to Google (see google_auth.service)
+    return service("gmail", "gmail", "v1")
 
 def header(message, name):
     for h in message["payload"].get("headers", []):
@@ -50,4 +47,3 @@ def is_connected():
 
 def sign_out():
     forget_credentials("gmail")
-    get_service.cache_clear()

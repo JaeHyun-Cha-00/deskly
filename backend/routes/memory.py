@@ -11,7 +11,7 @@ def changed(action, *args):
     try:
         action(*args)
     except ValueError as error:
-        raise HTTPException(400, str(error))
+        raise HTTPException(400, str(error)) from error
     return everything()
 
 @router.get("/api/memory")

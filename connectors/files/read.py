@@ -131,8 +131,8 @@ def disk_usage(folder="~", top=10):
     # every folder is measured at the same time; sizes are only measured, never read
     with ThreadPoolExecutor(max_workers=8) as pool:
         sizes = list(pool.map(measure, children))
-    folders = [{"name": p.name, "size": size} for p, size in zip(children, sizes) if size is not None]
-    slow = [p.name for p, size in zip(children, sizes) if size is None]
+    folders = [{"name": p.name, "size": size} for p, size in zip(children, sizes, strict=True) if size is not None]
+    slow = [p.name for p, size in zip(children, sizes, strict=True) if size is None]
     folders.sort(key=lambda f: f["size"], reverse=True)
 
     big = subprocess.run(["mdfind", "-onlyin", str(where), "kMDItemFSSize > 50000000"], capture_output=True, text=True, timeout=15)

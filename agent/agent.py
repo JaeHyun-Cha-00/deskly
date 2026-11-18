@@ -70,33 +70,47 @@ class CapToolResults(AgentMiddleware):
     async def awrap_tool_call(self, request, handler):
         return self.cut(await handler(request))
 
-def approval(name):
+def approval():
     return {
         "allowed_decisions": ["approve", "edit", "reject"],
-        "description": lambda call, state, runtime: approval_text(call),
+        "description": lambda call, _state, _runtime: approval_text(call),
     }
 
 # built agents by (length, connectors, use_memory); building one loads the MCP servers' tools
 AGENTS = {}
 
+def left_out(failed):
+    # what to tell the user about MCP servers that couldn't be used for this answer
+    notices = []
+    for server, why in failed.items():
+        name = SERVERS[server]["name"]
+        if why == "sign_in":
+            notices.append(f"{name}'s sign-in expired, so I answered without it. Open Connectors to connect it again.")
+        else:
+            notices.append(f"{name} didn't answer, so I answered without it.")
+    return notices
+
 async def get_agent(length="short", connectors=(), use_memory=False):
+    # the agent, and notices about any app that had to be left out of this answer
     key = (length, connectors, use_memory)
     if key in AGENTS:
-        return AGENTS[key]
+        return AGENTS[key], []
     tools = tools_for(connectors)
     if use_memory:
         tools = tools + APPS["memory"].TOOLS
     writes = set(WRITE_TOOLS)
-    failed = []
+    failed = {}
     servers = [name for name in connectors if name in SERVERS]
     if servers:
         mcp_tools, mcp_writes, failed = await load_tools(servers)
         tools, writes = tools + mcp_tools, writes | mcp_writes
-    agent = build_agent(length, connectors, tools, writes, use_memory)
+    # an app whose tools didn't load isn't in the prompt either, so the model doesn't claim it
+    usable = tuple(name for name in connectors if name not in failed)
+    agent = build_agent(length, usable, tools, writes, use_memory)
     # a server that didn't answer is tried again next time instead of being left out for good
     if not failed:
         AGENTS[key] = agent
-    return agent
+    return agent, left_out(failed)
 
 def build_agent(length, connectors, tools, writes, use_memory=False):
     model = ChatOpenAI(
@@ -125,7 +139,7 @@ def build_agent(length, connectors, tools, writes, use_memory=False):
             ToolErrorMiddleware(on_error=lambda error: f"Error: {error}"),
             ToolCallLimitMiddleware(run_limit=config["max_tool_calls"], exit_behavior="continue"),
             # stops before any tool that changes something, until the user decides
-            HumanInTheLoopMiddleware(interrupt_on={name: approval(name) for name in writes}, edit_notice=EDIT_NOTICE),
+            HumanInTheLoopMiddleware(interrupt_on={name: approval() for name in writes}, edit_notice=EDIT_NOTICE),
         ],
         checkpointer=CHECKPOINTS,
     )
@@ -134,7 +148,9 @@ def chat(messages, text):
     # the terminal chat: one run, nothing to approve there (write tools stop and are skipped)
     messages = messages + [{"role": "user", "content": text}]
     async def ask():
-        agent = await get_agent(connectors=connected(), use_memory=memory.is_on())
+        agent, notices = await get_agent(connectors=connected(), use_memory=memory.is_on())
+        for notice in notices:
+            print(f"({notice})")
         return await agent.ainvoke({"messages": messages}, {"configurable": {"thread_id": "terminal"}})
 
     found = event_loop.run(ask())

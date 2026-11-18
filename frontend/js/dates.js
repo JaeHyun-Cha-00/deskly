@@ -1,9 +1,9 @@
-export function parseDate(value) {
+function parseDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function daysAgo(date) {
+function daysAgo(date) {
   const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   return Math.round((day(new Date()) - day(date)) / 86400000);
 }

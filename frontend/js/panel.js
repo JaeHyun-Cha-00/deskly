@@ -13,7 +13,7 @@ export function uniqueMails(steps) {
 }
 
 // the app a step belongs to; the server names it ("Gmail", "GitHub")
-export function stepApp(step) {
+function stepApp(step) {
   return step.app || "Other";
 }
 
@@ -22,7 +22,7 @@ export function stepApps(steps) {
   return [...new Set(steps.map(stepApp))];
 }
 
-export function chatMails() {
+function chatMails() {
   const steps = state.turns.flatMap((turn) => turn.steps);
   const opened = uniqueMails(steps.filter((s) => OPENED.has(s.tool)));
   const openedIds = new Set(opened.map((m) => m.id));
@@ -30,7 +30,7 @@ export function chatMails() {
   return { opened, found };
 }
 
-export function chatEvents() {
+function chatEvents() {
   const found = new Map();
   // chats saved before Calendar have no events on their steps
   for (const step of state.turns.flatMap((turn) => turn.steps)) {
@@ -39,7 +39,7 @@ export function chatEvents() {
   return [...found.values()].sort((a, b) => a.start.localeCompare(b.start));
 }
 
-export function chatFiles() {
+function chatFiles() {
   const found = new Map();
   for (const step of state.turns.flatMap((turn) => turn.steps)) {
     for (const file of step.files || []) if (!found.has(file.path)) found.set(file.path, file);
@@ -141,7 +141,7 @@ function resultButton(step, title, onClick) {
   return result;
 }
 
-export function mailSection(title, mails) {
+function mailSection(title, mails) {
   const section = el("section", "panel-section");
   if (title) section.append(el("h3", "panel-section-title", `${title}, ${mails.length}`));
   const list = el("ul", "mail-list");
@@ -166,7 +166,7 @@ export function mailSection(title, mails) {
   return section;
 }
 
-export function eventSection(title, events) {
+function eventSection(title, events) {
   const section = el("section", "panel-section");
   if (title) section.append(el("h3", "panel-section-title", `${title}, ${events.length}`));
   const list = el("ul", "mail-list");
@@ -200,7 +200,7 @@ function fileSize(size) {
   return `${unit ? size.toFixed(1) : size} ${units[unit]}`;
 }
 
-export function fileSection(title, files) {
+function fileSection(title, files) {
   const section = el("section", "panel-section");
   if (title) section.append(el("h3", "panel-section-title", `${title}, ${files.length}`));
   const list = el("ul", "mail-list");
@@ -232,7 +232,7 @@ export function openMail(id) {
   showPanel({ view: "mail", id, back }, true);
 }
 
-export async function renderMail(id) {
+async function renderMail(id) {
   const body = $("panel-body");
   $("panel-title").textContent = "Mail";
 

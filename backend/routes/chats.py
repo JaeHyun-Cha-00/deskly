@@ -10,11 +10,14 @@ from backend import history, runner
 
 router = APIRouter()
 
+# about 5k tokens: enough for a long paste, without filling the model's context with one message
+MAX_MESSAGE_CHARS = 20000
+
 def chat_id_or_400(chat_id):
     try:
         history.path(chat_id)
     except ValueError:
-        raise HTTPException(400, "That is not a chat id.")
+        raise HTTPException(400, "That is not a chat id.") from None
     return chat_id
 
 def stream(out):
@@ -59,6 +62,8 @@ async def ask(request: Request):
     chat_id, text = chat_id_or_400(str(body.get("chat_id", ""))), str(body.get("text", "")).strip()
     if not text:
         raise HTTPException(400, "Write a message first.")
+    if len(text) > MAX_MESSAGE_CHARS:
+        raise HTTPException(400, f"That message is too long. Keep it under {MAX_MESSAGE_CHARS:,} characters.")
 
     # its own thread, so the answer is saved even if the page stops listening
     out = queue.Queue()
@@ -80,7 +85,7 @@ def clean_decision(raw):
         if not isinstance(action.get("name"), str) or not isinstance(args, dict):
             raise HTTPException(400, "An edit needs the action's name and details.")
         # the card edits plain text and numbers only
-        if not all(isinstance(k, str) and isinstance(v, (str, int, float, bool)) for k, v in args.items()):
+        if not all(isinstance(k, str) and isinstance(v, str | int | float | bool) for k, v in args.items()):
             raise HTTPException(400, "An edit can only change text and numbers.")
         return {"type": "edit", "edited_action": {"name": action["name"], "args": args}}
     raise HTTPException(400, "Approve, edit or reject.")

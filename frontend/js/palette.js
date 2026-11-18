@@ -6,10 +6,10 @@ import { panelIsOpen, setPanel } from "./panel.js";
 import { changeSetting, openSettings } from "./settings.js";
 import { state } from "./state.js";
 
-export let paletteItems = [];
-export let paletteActive = 0;
+let paletteItems = [];
+let paletteActive = 0;
 
-export function paletteCommands() {
+function paletteCommands() {
   const themes = { system: "Match system", light: "Light", dark: "Dark" };
   const items = [
     { group: "Actions", label: "New chat", run: newChat },
@@ -31,7 +31,7 @@ export function openPalette() {
   paletteInput.focus();
 }
 
-export function filterPalette() {
+function filterPalette() {
   const words = paletteInput.value.toLowerCase().split(/\s+/).filter(Boolean);
   paletteItems = paletteCommands().filter((item) => words.every((word) => item.label.toLowerCase().includes(word)));
   paletteActive = 0;
@@ -58,7 +58,7 @@ export function filterPalette() {
   markPalette(0);
 }
 
-export function markPalette(index) {
+function markPalette(index) {
   paletteActive = index;
   paletteList.querySelectorAll(".palette-item").forEach((option) => {
     const selected = option.id === `palette-item-${index}`;
@@ -68,7 +68,7 @@ export function markPalette(index) {
   paletteInput.setAttribute("aria-activedescendant", `palette-item-${index}`);
 }
 
-export function runPalette(index) {
+function runPalette(index) {
   const item = paletteItems[index];
   if (!item) return;
   palette.close();

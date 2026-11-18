@@ -1,13 +1,13 @@
 import { HEADERS, api } from "./api.js";
 import { loadChats, showTitle } from "./chats.js";
-import { emptyEl, form, input, sendButton } from "./dom.js";
+import { emptyEl, form, input, sendButton, toast } from "./dom.js";
 import { loadMemory } from "./memory.js";
 import { renderPanel } from "./panel.js";
 import { state } from "./state.js";
 import { loadStatus, showNotice } from "./status.js";
 import { addUserMessage, createTurnView, finishStep, renderAnswer, renderApproval, renderCards, renderError, renderStep, scrollToEnd, setWaiting, showContext, showStopped, startTimer, stopTimer, streamToken } from "./turns.js";
 
-export async function stopAnswer() {
+async function stopAnswer() {
   const controller = state.controller;
   sendButton.disabled = true;
   await api(`/api/chats/${state.chatId}/stop`, { method: "POST" }).catch(() => {});
@@ -15,14 +15,14 @@ export async function stopAnswer() {
   setTimeout(() => loadChats().catch(() => {}), 1500);
 }
 
-export function setBusy(busy) {
+function setBusy(busy) {
   state.busy = busy;
   sendButton.textContent = busy ? "Stop" : "Send";
   sendButton.classList.toggle("stop", busy);
   sendButton.disabled = false;
 }
 
-export async function readEvents(response, onEvent) {
+async function readEvents(response, onEvent) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -38,7 +38,7 @@ export async function readEvents(response, onEvent) {
   }
 }
 
-export function handleEvent(view, event) {
+function handleEvent(view, event) {
   const turn = view.turn;
   // picking up a paused answer sends the paused step again
   if (event.type === "step" && turn.steps.some((s) => s.id === event.id)) return;
@@ -60,6 +60,11 @@ export function handleEvent(view, event) {
     }
   }
   if (event.type === "token") streamToken(view, event.text);
+  if (event.type === "notice") {
+    // an app couldn't be used for this answer; the Connectors light may have changed too
+    toast(event.message);
+    loadStatus();
+  }
   if (event.type === "usage") {
     turn.context = { tokens: event.tokens, limit: event.limit };
     showContext(view);
@@ -166,7 +171,7 @@ async function follow(view, url, body, retryText) {
   }
 }
 
-export function resizeInput() {
+function resizeInput() {
   input.style.height = "auto";
   input.style.height = `${input.scrollHeight}px`;
 }

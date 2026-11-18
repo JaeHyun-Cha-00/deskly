@@ -32,4 +32,4 @@ async def save_settings(request: Request):
     try:
         return settings.update(await request.json())
     except ValueError as error:
-        raise HTTPException(400, str(error))
+        raise HTTPException(400, str(error)) from error

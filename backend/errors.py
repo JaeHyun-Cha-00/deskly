@@ -1,4 +1,5 @@
 from connectors.apps import APPS
+from connectors.google_auth import broken_sign_ins
 
 FRIENDLY_ERRORS = {
     "AuthenticationError": "OpenRouter didn't accept the API key. Check OPENROUTER_API_KEY in .env, then restart the app.",
@@ -26,7 +27,8 @@ def error_name(error):
 def friendly_error(error):
     name = error_name(error)
     if name == "RefreshError":
-        # a saved sign-in no longer works, and the error doesn't say which app's
-        for client in APPS.values():
-            client.sign_out()
+        # a Google sign-in no longer works; the error doesn't say which app's, so check each
+        # Google app and sign out only the broken one (never files or MCP apps)
+        for app in broken_sign_ins():
+            APPS[app].sign_out()
     return FRIENDLY_ERRORS.get(name, str(error))

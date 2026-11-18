@@ -5,7 +5,7 @@ import { renderMarkdown } from "./markdown.js";
 import { OPENED, markOpenMail, openMail, panelIsOpen, renderPanel, showPanel, stepApps, uniqueMails } from "./panel.js";
 import { state } from "./state.js";
 
-export function nearBottom() {
+function nearBottom() {
   return thread.scrollHeight - thread.scrollTop - thread.clientHeight < 160;
 }
 
@@ -56,7 +56,7 @@ export function createTurnView(turn, live) {
 
 const seconds = (s) => (s < 60 ? `${Math.max(1, Math.round(s))}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`);
 
-export function showChip(view) {
+function showChip(view) {
   const { turn, chip } = view;
   const working = Boolean(view.timer);
   const steps = turn.steps;
@@ -293,7 +293,7 @@ export function renderCards(view) {
   markOpenMail();
 }
 
-export function mailCard(mail) {
+function mailCard(mail) {
   const card = button("mail-card", undefined, () => openMail(mail.id));
   card.dataset.mailId = mail.id;
   card.append(

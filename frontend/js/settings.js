@@ -43,7 +43,7 @@ $("settings-form").addEventListener("input", (event) => {
   applySeeThrough({ ...state.settings, [name]: value });
 });
 
-export function resetDeleteAll() {
+function resetDeleteAll() {
   const remove = $("delete-all");
   delete remove.dataset.confirm;
   remove.textContent = "Delete all chats";

@@ -1,11 +1,10 @@
 import json
-import os
 import re
 import threading
 import uuid
 from datetime import datetime
 
-from config import MEMORY_FILE
+from config import MEMORY_FILE, write_private
 
 # Facts the agent remembers about the user across chats. Every fact goes into the system
 # prompt, so the list stays short.
@@ -23,8 +22,7 @@ def load():
     return {"on": saved.get("on", True), "facts": saved.get("facts", [])}
 
 def save(memory):
-    MEMORY_FILE.write_text(json.dumps(memory, indent=1))
-    os.chmod(MEMORY_FILE, 0o600)
+    write_private(MEMORY_FILE, json.dumps(memory, indent=1))
 
 def is_on():
     return load()["on"]

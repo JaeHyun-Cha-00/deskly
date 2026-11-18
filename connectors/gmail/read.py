@@ -88,7 +88,3 @@ def drafts(query="", max_results=20):
 def draft(draft_id):
     found = get_service().users().drafts().get(userId="me", id=draft_id, format="full").execute()
     return full(found["message"]) | {"draft_id": found["id"]}
-
-if __name__ == "__main__":
-    for mail in search_threads("", max_results=5):
-        print(mail["count"], mail["subject"] or "(no subject)")

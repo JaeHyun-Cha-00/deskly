@@ -59,7 +59,9 @@ def run(chat_id, chat, turn, run_id, make_events, out):
 
     async def follow():
         chosen = settings.load()
-        runner = await get_agent(chosen["length"], connected(), use_memory=memory.is_on())
+        runner, notices = await get_agent(chosen["length"], connected(), use_memory=memory.is_on())
+        for notice in notices:
+            out.put({"type": "notice", "message": notice})
         async for event in make_events(runner):
             if chat_id in stopping:
                 return
@@ -122,7 +124,7 @@ def check_decisions(requests, decisions):
     # one decision per request, and an edit may change the details but not the tool
     if len(decisions) != len(requests):
         raise ValueError("Answer every request on the card.")
-    for request, decision in zip(requests, decisions):
+    for request, decision in zip(requests, decisions, strict=True):
         if decision["type"] == "edit" and decision["edited_action"]["name"] != request["name"]:
             raise ValueError("An edit can't change what kind of action it is.")
 

@@ -1,9 +1,9 @@
 import json
-import os
 import sys
 from getpass import getpass
 
-from connectors.mcp.auth import TOKENS_DIR, client_file
+from config import write_private
+from connectors.mcp.auth import client_file
 
 # Saves a hand-registered OAuth App's id and secret for one MCP server, without them ever
 # going through the chat or git:  uv run python -m connectors.mcp.save_client github
@@ -14,8 +14,5 @@ if __name__ == "__main__":
     client_secret = getpass(f"{name} OAuth App Client secret (hidden; Enter for none): ").strip()
     if not client_id:
         sys.exit("The Client ID is needed.")
-    TOKENS_DIR.mkdir(parents=True, exist_ok=True)
-    os.chmod(TOKENS_DIR, 0o700)
-    client_file(name).write_text(json.dumps({"client_id": client_id, "client_secret": client_secret}))
-    os.chmod(client_file(name), 0o600)
+    write_private(client_file(name), json.dumps({"client_id": client_id, "client_secret": client_secret}))
     print(f"Saved to {client_file(name)}")

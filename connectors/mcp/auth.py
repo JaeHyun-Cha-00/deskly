@@ -1,13 +1,12 @@
 import asyncio
 import json
-import os
 import webbrowser
 from urllib.parse import parse_qs, urlparse
 
 from mcp.client.auth import OAuthClientProvider
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 
-from config import APP_DIR
+from config import APP_DIR, write_private
 from connectors.mcp.servers import SERVERS
 
 TOKENS_DIR = APP_DIR / "mcp"
@@ -57,10 +56,7 @@ class FileTokenStorage:
         return json.loads(self.file.read_text()) if self.file.exists() else {}
 
     def save(self, data):
-        TOKENS_DIR.mkdir(parents=True, exist_ok=True)
-        os.chmod(TOKENS_DIR, 0o700)
-        self.file.write_text(json.dumps(data))
-        os.chmod(self.file, 0o600)
+        write_private(self.file, json.dumps(data))
 
     async def get_tokens(self):
         tokens = self.load().get("tokens")

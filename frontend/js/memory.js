@@ -20,7 +20,7 @@ export async function loadMemory() {
   if ($("memory").open) showList();
 }
 
-export async function openMemory() {
+async function openMemory() {
   closeDrawers();
   await loadMemory();
   showList();

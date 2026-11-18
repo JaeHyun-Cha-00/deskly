@@ -2,7 +2,8 @@ import os
 
 # The official MCP servers Deskly can connect to, by id. Each has the name and words shown in
 # Connectors, its address, and how it signs in: "oauth" (the user signs in in the browser)
-# or "none". Adding a server is one entry here.
+# or "none". "tools" (optional) keeps only those of the server's tools, since every tool's
+# description is sent with every question. Adding a server is one entry here.
 SERVERS = {
     "github": {
         "name": "GitHub",
@@ -28,6 +29,17 @@ SERVERS = {
             "users:read", "files:read", "canvases:read", "reactions:read",
             "chat:write",
         ]),
+    },
+    "notion": {
+        "name": "Notion",
+        "about": "Search and read your pages and databases. Creating or changing a page asks you first.",
+        "url": "https://mcp.notion.com/mcp",
+        "auth": "oauth",
+        # Notion registers Deskly by itself (no app to set up); "default" is the normal access
+        "scope": "default",
+        # Notion offers 77 tools worth about 90k tokens, more than half of what the model can
+        # hold, so only these are loaded (about 8k)
+        "tools": ["notion-search", "notion-fetch", "notion-list-recent-pages", "notion-create-pages", "notion-update-page"],
     },
 }
 
